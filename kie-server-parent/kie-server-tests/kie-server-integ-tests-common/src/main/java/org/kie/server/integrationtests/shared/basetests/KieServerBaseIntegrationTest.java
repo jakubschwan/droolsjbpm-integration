@@ -180,7 +180,7 @@ public abstract class KieServerBaseIntegrationTest {
     protected Map<String, Class<?>> extraClasses = new ConcurrentHashMap<String, Class<?>>();
 
     protected KieServicesClient createDefaultClient(KieServicesConfiguration configuration, MarshallingFormat marshallingFormat) throws Exception {
-        KieServicesClient kieServicesClient = null;
+        KieServicesClient kieServicesClient;
 
         configuration.setTimeout(DEFAULT_TIMEOUT);
         configuration.setMarshallingFormat(marshallingFormat);

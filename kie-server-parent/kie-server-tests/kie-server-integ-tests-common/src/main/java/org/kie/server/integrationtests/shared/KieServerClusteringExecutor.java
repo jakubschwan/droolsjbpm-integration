@@ -15,70 +15,55 @@
  */
 package org.kie.server.integrationtests.shared;
 
-import org.kie.server.integrationtests.shared.basetests.KieServerBaseIntegrationTest;
-import java.text.SimpleDateFormat;
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Date;
 import java.util.List;
-
-import org.drools.compiler.kie.builder.impl.KieServicesImpl;
+import java.util.Objects;
 import org.jboss.resteasy.plugins.server.tjws.TJWSEmbeddedJaxrsServer;
-import org.kie.api.KieServices;
 import org.kie.server.api.KieServerConstants;
 import org.kie.server.api.KieServerEnvironment;
-import org.kie.server.api.model.KieServerInfo;
 import org.kie.server.integrationtests.config.TestConfig;
+import org.kie.server.integrationtests.shared.basetests.KieServerBaseIntegrationTest;
 import org.kie.server.remote.rest.common.resource.KieServerRestImpl;
 import org.kie.server.services.api.KieServerExtension;
 import org.kie.server.services.api.SupportedTransports;
 import org.kie.server.services.impl.KieServerImpl;
 
-public class KieServerExecutor {
+public class KieServerClusteringExecutor extends KieServerExecutor {
 
-    protected TJWSEmbeddedJaxrsServer server;
+    private Integer ALLOCATED_PORT;
 
-    // Need to hold kie server instance because we need to manually handle startup/shutdown behavior defined in
-    // context listener org.kie.server.services.Bootstrap. Embedded server doesn't support ServletContextListeners.
-    protected KieServerImpl kieServer;
-
-    protected static SimpleDateFormat serverIdSuffixDateFormat = new SimpleDateFormat("yyyy-MM-DD-HHmmss_SSS");
-
+    @Override
     public void startKieServer() {
         if (server != null) {
             throw new RuntimeException("Kie execution server is already created!");
         }
 
-        setKieServerProperties();
-        registerKieServerId();
-
-        server = new TJWSEmbeddedJaxrsServer();
-        server.setPort(TestConfig.getKieServerAllocatedPort());
-        server.start();
-
-        addServerSingletonResources();
-    }
-    private void setKieServerProperties() {
         System.setProperty(KieServerConstants.CFG_BYPASS_AUTH_USER, "true");
         System.setProperty(KieServerConstants.CFG_HT_CALLBACK, "custom");
         System.setProperty(KieServerConstants.CFG_HT_CALLBACK_CLASS, "org.kie.server.integrationtests.jbpm.util.FixedUserGroupCallbackImpl");
         System.setProperty(KieServerConstants.CFG_PERSISTANCE_DS, "jdbc/jbpm-ds");
         System.setProperty(KieServerConstants.CFG_PERSISTANCE_TM, "org.hibernate.service.jta.platform.internal.BitronixJtaPlatform");
+        System.setProperty(KieServerConstants.CFG_PERSISTANCE_DIALECT, "org.hibernate.dialect.H2Dialect");
+//        System.setProperty(KieServerConstants.CFG_PERSISTANCE_DEFAULT_SCHEMA,null);
         System.setProperty(KieServerConstants.KIE_SERVER_CONTROLLER, TestConfig.getControllerHttpUrl());
         System.setProperty(KieServerConstants.CFG_KIE_CONTROLLER_USER, TestConfig.getUsername());
         System.setProperty(KieServerConstants.CFG_KIE_CONTROLLER_PASSWORD, TestConfig.getPassword());
-        System.setProperty(KieServerConstants.KIE_SERVER_LOCATION, TestConfig.getEmbeddedKieServerHttpUrl());
+        System.setProperty(KieServerConstants.KIE_SERVER_LOCATION, getEmbeddedKieServerHttpUrl());
         System.setProperty(KieServerConstants.KIE_SERVER_STATE_REPO, "./target");
+        System.setProperty(KieServerConstants.KIE_JBPM_UI_SERVER_EXT_DISABLED, "true");
 
-        // kie server policy settings
-        System.setProperty(KieServerConstants.KIE_SERVER_ACTIVATE_POLICIES, "KeepLatestOnly");
-        System.setProperty("policy.klo.interval", "5000");
-    }
-    private void registerKieServerId() {
+        // Register server id if wasn't done yet
         if (KieServerEnvironment.getServerId() == null) {
             KieServerEnvironment.setServerId(KieServerBaseIntegrationTest.class.getSimpleName() + "@" + serverIdSuffixDateFormat.format(new Date()));
             KieServerEnvironment.setServerName("KieServer");
         }
-    }
-    private void addServerSingletonResources() {
+
+        server = new TJWSEmbeddedJaxrsServer();
+        server.setPort(getKieServerAllocatedPort());
+        server.start();
+
         kieServer = new KieServerImpl();
         server.getDeployment().getRegistry().addSingletonResource(new KieServerRestImpl(kieServer));
 
@@ -90,20 +75,26 @@ public class KieServerExecutor {
                 server.getDeployment().getRegistry().addSingletonResource(component);
             }
         }
+
     }
 
-    public void stopKieServer() {
-        if (server == null) {
-            throw new RuntimeException("Kie execution server is already stopped!");
+    public String getEmbeddedKieServerHttpUrl() {
+        return "http://localhost:" + getKieServerAllocatedPort() + "/server";
+    }
+
+    public Integer getKieServerAllocatedPort() {
+        if (ALLOCATED_PORT == null) {
+            try {
+                ServerSocket server = new ServerSocket(0);
+                ALLOCATED_PORT = server.getLocalPort();
+                server.close();
+            } catch (IOException e) {
+                // failed to dynamically allocate port, try to use hard coded one
+                ALLOCATED_PORT = 9789;
+            }
         }
-        kieServer.destroy();
-        // The KieServices instance that was seen by the kieserver, will never be seen again at this point
-        ((KieServicesImpl) KieServices.Factory.get()).nullAllContainerIds();
-        server.stop();
-        server = null;
+
+        return ALLOCATED_PORT;
     }
 
-    public KieServerInfo getKieServerInfo() {
-        return kieServer.getInfo().getResult();
-    }
 }

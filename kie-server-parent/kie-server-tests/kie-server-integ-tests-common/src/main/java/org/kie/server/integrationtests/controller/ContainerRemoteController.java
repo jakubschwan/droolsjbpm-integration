@@ -22,8 +22,10 @@ import org.codehaus.cargo.container.configuration.Configuration;
 import org.codehaus.cargo.container.configuration.ConfigurationType;
 import org.codehaus.cargo.container.deployable.DeployableType;
 import org.codehaus.cargo.container.deployable.WAR;
+import org.codehaus.cargo.container.deployer.DeployableMonitor;
 import org.codehaus.cargo.container.deployer.Deployer;
 import org.codehaus.cargo.container.property.RemotePropertySet;
+import org.codehaus.cargo.container.deployer.UrlPathDeployableMonitor;
 import org.codehaus.cargo.container.property.ServletPropertySet;
 import org.codehaus.cargo.container.weblogic.WebLogicPropertySet;
 import org.codehaus.cargo.generic.DefaultContainerFactory;
@@ -54,6 +56,9 @@ public class ContainerRemoteController {
             configuration.setProperty(RemotePropertySet.PASSWORD, TestConfig.getCargoRemotePassword());
         }
 
+        //configuration.setProperty(ServletPropertySet.PORT, "38230");
+        configuration.setProperty("cargo.jboss.management-http.port", containerPort);
+
         // WLS remote configuration
         if (TestConfig.isWebLogicHomeProvided()) {
             String wlserverHome = TestConfig.getWebLogicHome().matches(".*/wlserver") ?
@@ -68,9 +73,10 @@ public class ContainerRemoteController {
         deployer.undeploy(deployable);
     }
 
-    public void deployWarFile(String context, String warFilePath) {
+    public void deployWarFile(String context, String warFilePath, DeployableMonitor dm) {
         WAR deployable = (WAR) new DefaultDeployableFactory().createDeployable(container.getId(), warFilePath, DeployableType.WAR);
         deployable.setContext(context);
-        deployer.deploy(deployable);
+        //DeployableMonitor dm = new UrlPathDeployableMonitor(configuration, System.getProperty("kie.server.context")+"/services/rest/server", 60000);
+        deployer.deploy(deployable, dm);
     }
 }
