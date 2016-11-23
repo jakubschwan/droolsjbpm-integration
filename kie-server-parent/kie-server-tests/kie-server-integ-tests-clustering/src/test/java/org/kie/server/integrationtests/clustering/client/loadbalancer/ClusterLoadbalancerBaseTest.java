@@ -1,19 +1,3 @@
-package org.kie.server.integrationtests.clustering.client.loadbalancer;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.kie.api.KieServices;
-import org.kie.api.runtime.KieContainer;
-import org.kie.server.api.model.ReleaseId;
-import org.kie.server.client.DocumentServicesClient;
-import org.kie.server.client.JobServicesClient;
-import org.kie.server.client.ProcessServicesClient;
-import org.kie.server.client.QueryServicesClient;
-import org.kie.server.client.UserTaskServicesClient;
-import org.kie.server.integrationtests.clustering.ClusterBaseTest;
-import org.kie.server.integrationtests.shared.KieServerDeployer;
-
 /*
  * Copyright 2016 JBoss by Red Hat.
  *
@@ -29,8 +13,23 @@ import org.kie.server.integrationtests.shared.KieServerDeployer;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.kie.server.integrationtests.clustering.client.loadbalancer;
+
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.kie.api.KieServices;
+import org.kie.api.runtime.KieContainer;
+import org.kie.server.api.model.ReleaseId;
+import org.kie.server.client.DocumentServicesClient;
+import org.kie.server.client.JobServicesClient;
+import org.kie.server.client.ProcessServicesClient;
+import org.kie.server.client.QueryServicesClient;
+import org.kie.server.client.UserTaskServicesClient;
+import org.kie.server.integrationtests.clustering.ClusterBaseTest;
+import org.kie.server.integrationtests.shared.KieServerDeployer;
+
 public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
-    
+
     protected static ReleaseId releaseId = new ReleaseId("org.kie.server.testing", "definition-project", "1.0.0.Final");
     protected static KieContainer kieContainer;
 
@@ -42,7 +41,7 @@ public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
         kieContainer = KieServices.Factory.get().newKieContainer(releaseId);
     }
 
-    //these tests use defaultLoadBalancer in client
+    //client with defaultLoadBalancer
     protected ProcessServicesClient processClient;
     protected UserTaskServicesClient taskClient;
     protected QueryServicesClient queryClient;
@@ -57,11 +56,6 @@ public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
         queryClient = client.getServicesClient(QueryServicesClient.class);
         jobServicesClient = client.getServicesClient(JobServicesClient.class);
         documentClient = client.getServicesClient(DocumentServicesClient.class);
-    }
-
-    @After
-    public void cleanAfterTest() {
-        disposeAllClusterContainers();
     }
 
     protected Object createInstance(String objectClassIdentifier, Object... constructorParameters) {

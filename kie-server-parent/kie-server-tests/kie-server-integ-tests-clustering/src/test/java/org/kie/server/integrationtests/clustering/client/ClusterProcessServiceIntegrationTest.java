@@ -49,12 +49,16 @@ import org.kie.server.integrationtests.config.TestConfig;
 import org.kie.server.integrationtests.shared.KieServerAssert;
 import org.kie.server.integrationtests.shared.KieServerDeployer;
 import org.kie.server.integrationtests.shared.KieServerSynchronization;
+import static org.kie.server.integrationtests.clustering.ClusterTestConstants.*;
 
 public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest {
 
     private static ReleaseId releaseId = new ReleaseId("org.kie.server.testing", "definition-project",
             "1.0.0.Final");
-    protected static KieContainer kieContainer;
+    private static ReleaseId startTimerReleaseId = new ReleaseId("org.kie.server.testing", "start-timer",
+            "1.0.0.Final");
+
+    private String startTimerContainerId = new String("start-timer");
 
     private final List<Integer> statusList = Arrays.asList(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE, org.kie.api.runtime.process.ProcessInstance.STATE_ABORTED, org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED);
 
@@ -62,12 +66,13 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
     public static void buildAndDeployArtifacts() {
         KieServerDeployer.buildAndDeployCommonMavenParent();
         KieServerDeployer.buildAndDeployMavenProject(ClassLoader.class.getResource("/kjars-sources/definition-project").getFile());
-
-        kieContainer = KieServices.Factory.get().newKieContainer(releaseId);
+        KieServerDeployer.buildAndDeployMavenProject(ClassLoader.class.getResource("/kjars-sources/start-timer").getFile());
     }
 
     @Override
     protected void addExtraCustomClasses(Map<String, Class<?>> extraClasses) throws Exception {
+        super.addExtraCustomClasses(extraClasses);
+        kieContainer = KieServices.Factory.get().newKieContainer(releaseId);
         extraClasses.put(PERSON_CLASS_NAME, Class.forName(PERSON_CLASS_NAME, true, kieContainer.getClassLoader()));
     }
 
@@ -82,17 +87,6 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
 
         KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
         KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
-    }
-
-    private void deployContainerOnTemplateTwo() throws Exception {
-        Map<Capability, ContainerConfig> config = new HashMap<>();
-        config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.SINGLETON.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
-
-        ContainerSpec containerToDeploy = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateTwo, releaseId, KieContainerStatus.STOPPED, config);
-        mgmtControllerClient.saveContainerSpec(templateTwo.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateTwo.getId(), CONTAINER_ID);
-
-        KieServerSynchronization.waitForKieServerSynchronization(clientAlpha, 1);
     }
 
     @Test
@@ -127,7 +121,6 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
     }
 
     @Test
-    @Category(Smoke.class)
     public void testCompleteProcess() {
         Long processInstanceId = processCharlieClient.startProcess(CONTAINER_ID, PROCESS_ID_SIGNAL_PROCESS);
         assertNotNull(processInstanceId);
@@ -158,7 +151,6 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
     @Test
     public void testStartSignalProcessInstance() {
         try {
-
             List<ProcessInstance> processInstances = queryCharlieClient.findProcessInstancesByProcessId(PROCESS_ID_SIGNAL_START, statusList, 0, 50);
             int initial = processInstances.size();
             processInstances = queryBravoClient.findProcessInstancesByProcessId(PROCESS_ID_SIGNAL_START, statusList, 0, 50);
@@ -174,12 +166,6 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
             e.printStackTrace();
             fail(e.getMessage());
         }
-    }
-
-    @Test
-    @Ignore
-    public void startProcessInstanceWithTimer() {
-
     }
 
     @Test
@@ -212,23 +198,23 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
         try {
             processAlphaClient.signalProcessInstance(CONTAINER_ID, processInstanceId, "Signal1", person);
             processAlphaClient.signalProcessInstance(CONTAINER_ID, processInstanceId, "Signal2", "My custom string event");
-            //check that process on templateOne still running
-            pi = processBravoClient.getProcessInstance(CONTAINER_ID, processInstanceId);
-            assertNotNull(pi);
-            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE, pi.getState().intValue());
-            pi = processCharlieClient.getProcessInstance(CONTAINER_ID, processInstanceId);
-            assertNotNull(pi);
-            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE, pi.getState().intValue());
-            //check that process on templateTwo is completed
-            pi = processAlphaClient.getProcessInstance(CONTAINER_ID, otherProcessInstanceId);
-            assertNotNull(pi);
-            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, pi.getState().intValue());
         } catch (Exception e) {
-            processBravoClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
+            processCharlieClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
             processAlphaClient.abortProcessInstance(CONTAINER_ID, otherProcessInstanceId);
             e.printStackTrace();
             fail(e.getMessage());
         }
+        //check that process on templateTwo is completed
+        pi = processAlphaClient.getProcessInstance(CONTAINER_ID, otherProcessInstanceId);
+        assertNotNull(pi);
+        assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, pi.getState().intValue());
+        //check that process on templateOne still running
+        pi = processCharlieClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+        assertNotNull(pi);
+        assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE, pi.getState().intValue());
+        pi = processBravoClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+        assertNotNull(pi);
+        assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE, pi.getState().intValue());
     }
 
     @Test(timeout = 60000)
@@ -312,7 +298,7 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
             assertNotNull(personVar);
             assertEquals(USER_JOHN, valueOf(personVar, "name"));
 
-turnOnBravoServer();
+            turnOnBravoServer();
             
             processBravoClient.setProcessVariable(CONTAINER_ID, processInstanceId, "stringData", "custom value");
 
@@ -325,19 +311,114 @@ turnOnBravoServer();
         }
 
     }
+    
+    @Test
+    public void testSignalContainer() throws Exception {
+        Long processInstanceId1 = processBravoClient.startProcess(CONTAINER_ID, PROCESS_ID_SIGNAL_PROCESS);
+        Long processInstanceId2 = processCharlieClient.startProcess(CONTAINER_ID, PROCESS_ID_SIGNAL_PROCESS);
 
+        assertNotNull(processInstanceId1);
+        assertTrue(processInstanceId1.longValue() > 0);assertNotNull(processInstanceId2);
+        assertTrue(processInstanceId2.longValue() > 0);
+
+        try {
+            //send singlas to container from diferent clients
+            Object person = createInstance(PERSON_CLASS_NAME,USER_JOHN);
+            processBravoClient.signal(CONTAINER_ID, "Signal1", person);
+            processCharlieClient.signal(CONTAINER_ID, "Signal2", "My custom string event");
+            //all process, that expect signal should be completed
+            ProcessInstance pi = processBravoClient.getProcessInstance(CONTAINER_ID, processInstanceId2);
+            assertNotNull(pi);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, pi.getState().intValue());
+            pi = processCharlieClient.getProcessInstance(CONTAINER_ID, processInstanceId1);
+            assertNotNull(pi);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, pi.getState().intValue());
+        } catch (Exception e){
+            processBravoClient.abortProcessInstance(CONTAINER_ID, processInstanceId1);
+            processCharlieClient.abortProcessInstance(CONTAINER_ID, processInstanceId2);
+            e.printStackTrace();
+            fail(e.getMessage());
+        }
+    }
+    
     @Test
     @Ignore
-    public void testProcessWithSubProcess() {
+    public void startProcessInstanceWithTimer() throws Exception {
+        Map<Capability, ContainerConfig> config = new HashMap<>();
+        config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.SINGLETON.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
 
+        ContainerSpec containerToDeploy = new ContainerSpec(startTimerContainerId, "start timer", templateOne, startTimerReleaseId, KieContainerStatus.STOPPED, config);
+        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(templateOne.getId(), startTimerContainerId);
+        long startTimeInMillis = System.currentTimeMillis();
+
+        KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
+        KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
+        
+        int processInstanceCount = 0;
+        
+        turnOffCharlieServer();
+        //normla starting
+        List<ProcessInstance> processInstancesList = queryBravoClient.findProcessInstances(0, 50);
+        assertNotNull(processInstancesList);
+        assertTrue(processInstanceCount < processInstancesList.size());
+        processInstanceCount = processInstancesList.size();
+        //normal starting on other template
+        turnOnCharlieServer();
+        turnOffBravoServer();
+        
+        processInstancesList = queryBravoClient.findProcessInstances(0, 50);
+        assertNotNull(processInstancesList);
+        assertTrue(processInstanceCount < processInstancesList.size());
+        processInstanceCount = processInstancesList.size();
+        
+        turnOffCharlieServer();
+        
+        turnOnBravoServer();
+        
+        processInstancesList = queryBravoClient.findProcessInstances(0, 50);
+        assertNotNull(processInstancesList);
+        assertTrue(processInstanceCount < processInstancesList.size());
+        processInstanceCount = processInstancesList.size();
+        
+        turnOffBravoServer();
+        mgmtControllerClient.stopContainer(templateOne.getId(), startTimerContainerId);
+        long stopTimeInMillis = System.currentTimeMillis();
+        
+        turnOnBravoServer();
+        
+        processInstancesList = queryBravoClient.findProcessInstances(0, 50);
+        assertNotNull(processInstancesList);
+        assertTrue(processInstanceCount == processInstancesList.size());
+        
+        long timeRunOfTestInMillis = stopTimeInMillis-startTimeInMillis;
+        long countOfProcessByTime = (timeRunOfTestInMillis / 1000) / 10 ; //to sec then cound of sec between start of processses
+        
+        processInstancesList = queryBravoClient.findProcessInstances(0, 50);
+        assertNotNull(processInstancesList);
+        assertEquals(countOfProcessByTime, processInstancesList.size());
+        
+        
+        
+        //separete project with only this process deploying process evry 5/10 seconds (decide from speed of tests)
+        //need new process - update timer
+        //processes strated by timer (5 instances evry second)
+        //undeploy one server instance (if ok)
+        // other scenario - undeploy both after redeploy check if process are completed / still starting
+        
     }
 
-    @Test
-    @Ignore
-    public void testProcessWithFailedSubProcess() {
+    private void deployContainerOnTemplateTwo() throws Exception {
+        Map<Capability, ContainerConfig> config = new HashMap<>();
+        config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.SINGLETON.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
 
+        ContainerSpec containerToDeploy = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateTwo, releaseId, KieContainerStatus.STOPPED, config);
+        mgmtControllerClient.saveContainerSpec(templateTwo.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(templateTwo.getId(), CONTAINER_ID);
+
+        KieServerSynchronization.waitForKieServerSynchronization(clientAlpha, 1);
     }
-
+        
     private void assertProcessInstance(ProcessInstance expected, ProcessInstance actual) {
         assertNotNull(actual);
         assertEquals(expected.getId(), actual.getId());

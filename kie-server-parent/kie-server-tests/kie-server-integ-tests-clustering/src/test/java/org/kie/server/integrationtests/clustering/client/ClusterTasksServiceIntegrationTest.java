@@ -24,12 +24,14 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.kie.api.KieServices;
 import org.kie.api.task.model.Status;
 import org.kie.server.api.model.KieContainerStatus;
 import org.kie.server.api.model.ReleaseId;
+import org.kie.server.api.model.instance.ProcessInstance;
 import org.kie.server.api.model.instance.TaskSummary;
 import org.kie.server.controller.api.model.spec.ContainerSpec;
-import static org.kie.server.integrationtests.clustering.client.ClusterClientBaseTest.CONTAINER_ID;
+import static org.kie.server.integrationtests.clustering.ClusterTestConstants.*;
 
 public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
 
@@ -41,6 +43,14 @@ public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
         ContainerSpec containerToDeploy = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, new HashMap());
         mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
         mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+    }
+    
+    @Override
+    protected void addExtraCustomClasses(Map<String, Class<?>> extraClasses) throws Exception {
+        super.addExtraCustomClasses(extraClasses);
+        kieContainer = KieServices.Factory.get().newKieContainer(releaseId);
+        System.out.println("\n*** " + kieContainer.getClassLoader().toString()+"\n\n");
+        extraClasses.put(PERSON_CLASS_NAME, Class.forName(PERSON_CLASS_NAME, true, kieContainer.getClassLoader()));
     }
 
     @Test
@@ -142,12 +152,35 @@ public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
 
     @Test
     @Ignore
-    public void testTaskWithDeadline() {
-    }
-
-    @Test
-    @Ignore
-    public void testSubTask() {
+    public void testTaskWithEscalation() throws Exception {
+        //separate class
+        turnOffCharlieServer();
+        
+        Long processInstanceId = processBravoClient.startProcess(CONTAINER_ID, PROCESS_ID_USERTASK_ESCALATION); //make a longer version
+        assertNotNull(processInstanceId);
+        assertTrue(processInstanceId.longValue() > 0);
+        
+        turnOffBravoServer();
+        //wait a while for task escalation
+        Thread.sleep(5000l);
+        //start other server
+        turnOnCharlieServer();
+        List<TaskSummary> taskList = taskCharlieClient.findTasksByStatusByProcessInstanceId(processInstanceId, null, 0, 10);
+        assertNotNull(taskList);
+        assertEquals(1, taskList.size());
+        TaskSummary taskSummary = taskList.get(0);
+        assertEquals(CONTAINER_ID, taskSummary.getContainerId());
+        assertEquals(processInstanceId, taskSummary.getProcessInstanceId());
+        assertEquals("Failed" /* or "fail" */, taskSummary.getStatus()); //search for better one
+        
+        ProcessInstance pi = processCharlieClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+        assertNotNull(pi);
+        assertEquals(processInstanceId, pi.getId());
+        assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_SUSPENDED, pi.getState().intValue());
+        
+        //human task with escalation
+        //start process and tunr of server instances
+        //after restart task should be escalated -> ended
     }
 
     private void checkTaskNameAndStatus(TaskSummary taskSummary, String name, Status status) {

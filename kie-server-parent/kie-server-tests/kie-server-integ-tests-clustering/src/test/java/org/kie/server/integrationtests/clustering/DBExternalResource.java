@@ -24,17 +24,13 @@ public class DBExternalResource extends ExternalResource {
 
     @Override
     protected void after() {
-
         if (pds != null) {
             pds.close();
         }
     }
 
-    ;
-
     @Override
     protected void before() throws Throwable {
-
         KieServerBaseIntegrationTest.cleanupSingletonSessionId();
 
         pds = new PoolingDataSource();
@@ -48,5 +44,4 @@ public class DBExternalResource extends ExternalResource {
         pds.getDriverProperties().put("driverClassName", "org.h2.Driver");
         pds.init();
     }
-;
-};
+}

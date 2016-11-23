@@ -15,8 +15,6 @@
  */
 package org.kie.server.integrationtests.clustering.client.loadbalancer;
 
-//load via client all process definition by list
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
+import org.junit.Test;
 import org.kie.internal.runtime.conf.MergeMode;
 import org.kie.internal.runtime.conf.RuntimeStrategy;
 import org.kie.server.api.model.KieContainerStatus;
@@ -50,7 +49,8 @@ public class ClusterLoadbalancerProcessDefinitionIntegrationTest extends Cluster
         ContainerSpec containerSpec = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, config);
         mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
     }
-    
+
+    @Test
     public void testListProcessDefinition() throws Exception {
         List<ProcessDefinition> processDefinitions = queryClient.findProcesses(0, 20);
         KieServerAssert.assertNullOrEmpty("Founded process definition, but no containers are deployed", processDefinitions);
@@ -65,7 +65,6 @@ public class ClusterLoadbalancerProcessDefinitionIntegrationTest extends Cluster
         List<String> processIds = collectDefinitions(processDefinitions);
         checkProcessDefinitions(processIds);
 
-        // test paging of the result
         processDefinitions = queryClient.findProcesses(0, 3, QueryServicesClient.SORT_BY_NAME, true);
 
         assertNotNull(processDefinitions);

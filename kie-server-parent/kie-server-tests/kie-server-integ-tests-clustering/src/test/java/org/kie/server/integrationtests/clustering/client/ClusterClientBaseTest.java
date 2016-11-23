@@ -16,6 +16,7 @@
 package org.kie.server.integrationtests.clustering.client;
 
 import org.junit.Before;
+import org.kie.api.runtime.KieContainer;
 import org.kie.server.client.DocumentServicesClient;
 import org.kie.server.client.JobServicesClient;
 import org.kie.server.client.ProcessServicesClient;
@@ -24,32 +25,8 @@ import org.kie.server.client.UserTaskServicesClient;
 import org.kie.server.integrationtests.clustering.ClusterBaseTest;
 
 public abstract class ClusterClientBaseTest extends ClusterBaseTest {
-    // set clients for deploying and excluding tasks
 
-    protected static final String USER_YODA = "yoda";
-    protected static final String USER_JOHN = "john";
-    protected static final String USER_ADMINISTRATOR = "Administrator";
-    protected static final String USER_MARY = "mary";
-
-    protected static final String PERSON_CLASS_NAME = "org.jbpm.data.Person";
-
-    protected static final String CONTAINER_ID = "definition-project";
-    protected static final String CONTAINER_NAME = "definition-project";
-
-    protected static final String PROCESS_ID_USERTASK = "definition-project.usertask";
-    protected static final String PROCESS_ID_EVALUATION = "definition-project.evaluation";
-    protected static final String PROCESS_ID_CALL_EVALUATION = "definition-project.call-evaluation";
-    protected static final String PROCESS_ID_GROUPTASK = "definition-project.grouptask";
-    protected static final String PROCESS_ID_ASYNC_SCRIPT = "AsyncScriptTask";
-    protected static final String PROCESS_ID_TIMER = "definition-project.timer-process";
-    protected static final String PROCESS_ID_SIGNAL_PROCESS = "definition-project.signalprocess";
-    protected static final String PROCESS_ID_SIGNAL_START = "signal-start";
-    protected static final String PROCESS_ID_CUSTOM_TASK = "customtask";
-    protected static final String PROCESS_ID_USERTASK_ESCALATION = "humanTaskEscalation";
-    protected static final String PROCESS_ID_XYZ_TRANSLATIONS = "xyz-translations";
-
-    protected static final long SERVICE_TIMEOUT = 30000;
-    protected static final long TIMEOUT_BETWEEN_CALLS = 200;
+    protected static KieContainer kieContainer;
 
     protected ProcessServicesClient processCharlieClient;
     protected UserTaskServicesClient taskCharlieClient;
@@ -79,6 +56,7 @@ public abstract class ClusterClientBaseTest extends ClusterBaseTest {
     }
 
     //copy from RestJmsBaseTest
+    //move other location - is used in more tests...
     protected Object createInstance(String objectClassIdentifier, Object... constructorParameters) {
         Class<?>[] parameterClasses = new Class[constructorParameters.length];
         for (int i = 0; i < constructorParameters.length; i++) {

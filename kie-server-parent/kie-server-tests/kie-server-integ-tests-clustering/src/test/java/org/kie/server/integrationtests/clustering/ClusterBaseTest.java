@@ -24,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 import org.codehaus.cargo.container.deployer.DeployableMonitor;
 import org.codehaus.cargo.container.deployer.URLDeployableMonitor;
 import org.junit.After;
+import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -155,7 +156,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
 
     protected void turnOnBravoServer() throws InterruptedException, TimeoutException, Exception {
         if (!bravoKieServerIsDeployed) {
-            System.out.println("\n***** Turn on BRAVO\n" + bravoKieServerIsDeployed + System.getProperty("kie.server.context"));
+            System.out.println("\n***** Turn on BRAVO\n");
             DeployableMonitor dm = new URLDeployableMonitor(new URL(kieServerUrlBravo), 60000);
             ContainerRemoteController remoteControllerBravo = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 150));
             remoteControllerBravo.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster1/deployments/kie-server-services.war", dm);
@@ -166,7 +167,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
 
     protected void turnOffBravoServer() throws Exception {
         if (bravoKieServerIsDeployed) {
-            System.out.println("\n***** Turn off BRAVO\n" + bravoKieServerIsDeployed);
+            System.out.println("\n***** Turn off BRAVO\n");
             ContainerRemoteController remoteControllerBravo = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 150));
             remoteControllerBravo.undeployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster1/deployments/kie-server-services.war");
             bravoKieServerIsDeployed = false;
@@ -175,7 +176,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
 
     protected void turnOnCharlieServer() throws Exception {
         if (!charliKieServerIsDeployed) {
-            System.out.println("\n***** Turn on CHARLIE\n" + charliKieServerIsDeployed);
+            System.out.println("\n***** Turn on CHARLIE\n");
             DeployableMonitor dm = new URLDeployableMonitor(new URL(kieServerUrlCharlie), 60000);
             ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 300));
             remoteControllerCharlie.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster2/deployments/kie-server-services.war", dm);
@@ -186,7 +187,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
 
     protected void turnOffCharlieServer() throws Exception {
         if (charliKieServerIsDeployed) {
-            System.out.println("\n***** Turn off CHARLIE\n" + charliKieServerIsDeployed);
+            System.out.println("\n***** Turn off CHARLIE\n");
             ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 300));
             remoteControllerCharlie.undeployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster2/deployments/kie-server-services.war");
             charliKieServerIsDeployed = false;

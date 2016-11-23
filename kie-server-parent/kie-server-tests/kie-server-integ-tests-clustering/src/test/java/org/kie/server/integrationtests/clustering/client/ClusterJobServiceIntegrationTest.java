@@ -157,56 +157,6 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
         assertEquals(1 + currentNumberOfCancelled, result.size());
     }
 
-    @Test
-    public void testScheduleAndRequeueJob() throws Exception {
-        //first stop Charlie
-        turnOffCharlieServer();
-
-        String command = "org.jbpm.executor.commands.PrintOutCommand123";
-
-        Map<String, Object> data = new HashMap<String, Object>();
-        data.put("businessKey", BUSINESS_KEY);
-        data.put("retries", 0);
-
-        JobRequestInstance jobRequestInstance = new JobRequestInstance();
-        jobRequestInstance.setCommand(command);
-        jobRequestInstance.setData(data);
-
-        Long jobId = jobServicesBravoClient.scheduleRequest(jobRequestInstance);
-        assertNotNull(jobId);
-        assertTrue(jobId.longValue() > 0);
-
-        RequestInfoInstance jobRequest = jobServicesBravoClient.getRequestById(jobId, false, false);
-        assertNotNull(jobRequest);
-        assertEquals(jobId, jobRequest.getId());
-        assertEquals(BUSINESS_KEY, jobRequest.getBusinessKey());
-        assertThat(jobRequest.getStatus(), anyOf(
-                equalTo(STATUS.QUEUED.toString()),
-                equalTo(STATUS.RUNNING.toString()),
-                equalTo(STATUS.ERROR.toString())));
-        assertEquals(command, jobRequest.getCommandName());
-
-        KieServerSynchronization.waitForJobToFinish(jobServicesBravoClient, jobId);
-
-        RequestInfoInstance expected = createExpectedRequestInfoInstance(jobId, STATUS.ERROR);
-        expected.setCommandName(command);
-
-        //shut down Bravo and start Charlie
-        turnOffBravoServer();
-        turnOnCharlieServer();
-
-        jobRequest = jobServicesCharlieClient.getRequestById(jobId, false, false);
-        assertRequestInfoInstance(expected, jobRequest);
-
-        jobServicesCharlieClient.requeueRequest(jobId);
-
-        jobRequest = jobServicesCharlieClient.getRequestById(jobId, false, false);
-        expected.setStatus(STATUS.QUEUED.toString());
-        assertRequestInfoInstance(expected, jobRequest);
-
-        KieServerSynchronization.waitForJobToFinish(jobServicesCharlieClient, jobId);
-    }
-
     private void assertRequestInfoInstance(RequestInfoInstance expected, RequestInfoInstance actual) {
         assertNotNull(actual);
         assertEquals(expected.getId(), actual.getId());

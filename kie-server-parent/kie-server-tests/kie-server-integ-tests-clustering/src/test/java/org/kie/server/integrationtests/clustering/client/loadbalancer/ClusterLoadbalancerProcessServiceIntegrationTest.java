@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.kie.api.KieServices;
 import org.kie.internal.runtime.conf.MergeMode;
 import org.kie.internal.runtime.conf.RuntimeStrategy;
 import org.kie.server.api.model.KieContainerStatus;
@@ -36,19 +37,16 @@ import org.kie.server.controller.api.model.spec.ContainerConfig;
 import org.kie.server.controller.api.model.spec.ContainerSpec;
 import org.kie.server.controller.api.model.spec.ProcessConfig;
 import org.kie.server.integrationtests.category.Smoke;
-import static org.kie.server.integrationtests.clustering.ClusterTestConstants.CONTAINER_ID;
-import static org.kie.server.integrationtests.clustering.ClusterTestConstants.CONTAINER_NAME;
-import static org.kie.server.integrationtests.clustering.ClusterTestConstants.PERSON_CLASS_NAME;
-import static org.kie.server.integrationtests.clustering.ClusterTestConstants.PROCESS_ID_SIGNAL_PROCESS;
-import static org.kie.server.integrationtests.clustering.ClusterTestConstants.USER_JOHN;
+import static org.kie.server.integrationtests.clustering.ClusterTestConstants.*;
 import org.kie.server.integrationtests.config.TestConfig;
 import org.kie.server.integrationtests.shared.KieServerSynchronization;
 
-//example test class - should be deleted
 public class ClusterLoadbalancerProcessServiceIntegrationTest extends ClusterLoadbalancerBaseTest {
 
     @Override
     protected void addExtraCustomClasses(Map<String, Class<?>> extraClasses) throws Exception {
+        super.addExtraCustomClasses(extraClasses);
+        kieContainer = KieServices.Factory.get().newKieContainer(releaseId);
         extraClasses.put(PERSON_CLASS_NAME, Class.forName(PERSON_CLASS_NAME, true, kieContainer.getClassLoader()));
     }
 
