@@ -60,6 +60,9 @@ public class ClusterLoadbalancerProcessServiceIntegrationTest extends ClusterLoa
 
         mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
 
+        //make sure, that contianer is deployed on both servers
+        KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
+        KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
         KieServerSynchronization.waitForKieServerSynchronization(client, 1);
         System.out.println(client.listContainers().getResult().getContainers());
     }

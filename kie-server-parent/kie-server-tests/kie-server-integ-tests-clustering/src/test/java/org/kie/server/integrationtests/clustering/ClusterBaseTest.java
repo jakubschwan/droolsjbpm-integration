@@ -20,28 +20,34 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 import org.codehaus.cargo.container.deployer.DeployableMonitor;
 import org.codehaus.cargo.container.deployer.URLDeployableMonitor;
 import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.ExternalResource;
 import org.kie.server.api.model.KieContainerResource;
 import org.kie.server.api.model.KieContainerResourceList;
+import org.kie.server.api.model.KieServerStateInfo;
 import org.kie.server.api.model.ServiceResponse;
 import org.kie.server.controller.api.model.spec.ServerTemplate;
 import org.kie.server.client.KieServicesClient;
 import org.kie.server.client.KieServicesConfiguration;
+import org.kie.server.client.KieServicesException;
 import org.kie.server.client.KieServicesFactory;
 import org.kie.server.controller.api.model.spec.ContainerSpec;
 import org.kie.server.integrationtests.config.TestConfig;
 import org.kie.server.integrationtests.controller.ContainerRemoteController;
 import org.kie.server.integrationtests.controller.client.KieServerMgmtControllerClient;
 import org.kie.server.integrationtests.shared.basetests.RestOnlyBaseIntegrationTest;
+import org.kie.server.services.impl.storage.KieServerState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,19 +79,27 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     public void setupClustering() throws Exception {
         turnOnBravoServer();
         turnOnCharlieServer();
-        //for better stability (bug in cargo)
-        Thread.sleep(10000);
         startSynchronization(kieServerUrlBravo, clientBravo);
         startSynchronization(kieServerUrlCharlie, clientCharlie);
 
-        //may be separeted
+        setMgmtControllerClient();
+        setServerTeplates();
+
+        disposeAllContainersInCluster();
+        createClientsForServers();
+        disposeAllClusterContainers();
+    }
+    
+    private void setMgmtControllerClient() {
         if (TestConfig.isLocalServer()) {
             mgmtControllerClient = new KieServerMgmtControllerClient(TestConfig.getControllerHttpUrl(), null, null);
         } else {
             mgmtControllerClient = new KieServerMgmtControllerClient(TestConfig.getControllerHttpUrl(), TestConfig.getUsername(), TestConfig.getPassword());
         }
         mgmtControllerClient.setMarshallingFormat(marshallingFormat);
-
+    }
+    
+    private void setServerTeplates() {
         Collection<ServerTemplate> serverTemplates = mgmtControllerClient.listServerTemplates();
         if (serverTemplates.size() == 2) {
             Iterator<ServerTemplate> iterator = serverTemplates.iterator();
@@ -101,10 +115,6 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
                 templateTwo = iterator.next();
             }
         }
-
-        disposeAllContainersInCluster();
-        createClientsForServers();
-        disposeAllClusterContainers();
     }
 
     private void disposeAllContainersInCluster() {
@@ -136,6 +146,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     //delete this??
     protected void disposeAllClusterContainers(KieServicesClient... clients) {
         for (KieServicesClient kieServiceClient : clients) {
+            try {
             ServiceResponse<KieContainerResourceList> response = kieServiceClient.listContainers();
             assertEquals(ServiceResponse.ResponseType.SUCCESS, response.getType());
             List<KieContainerResource> containers = response.getResult().getContainers();
@@ -143,6 +154,9 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
                 for (KieContainerResource container : containers) {
                     kieServiceClient.disposeContainer(container.getContainerId());
                 }
+            }
+            } catch (KieServicesException ex) {
+                assertTrue(ex.getMessage().startsWith("404"));
             }
         }
     }
@@ -201,7 +215,20 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
             if (serverClient == null) {
                 try {
                     serverClient = createDefaultClient(serverUrl);
-                } catch (Exception ex) {
+                } catch (KieServicesException ex) {
+                    Thread.sleep(1000l);
+                    continue;
+                }
+            }
+            ServiceResponse<KieServerStateInfo> response = serverClient.getServerState();
+            if(response.getType().equals(ServiceResponse.ResponseType.FAILURE) || response.getResult() == null) {
+                Thread.sleep(1000l);
+                continue;
+            }
+            else {
+                try {
+                    serverClient = createDefaultClient(serverUrl);
+                } catch (KieServicesException ex) {
                     Thread.sleep(1000l);
                     continue;
                 }
@@ -223,5 +250,16 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
         addExtraCustomClasses(extraClasses);
         return createDefaultClient(config, marshallingFormat);
     }
-
+    
+    /***??
+    protected static void repeatIfNotFound(Callable<?> func) throws Exception {
+        try {
+            func.call();
+        } catch (KieServicesException ex ) {
+            if(ex.getMessage().startsWith("404")) {
+                func.call();
+            }
+        }
+    }
+*/
 }

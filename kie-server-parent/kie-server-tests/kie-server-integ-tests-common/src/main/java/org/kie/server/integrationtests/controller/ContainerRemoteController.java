@@ -43,6 +43,10 @@ public class ContainerRemoteController {
     public ContainerRemoteController(String cargoContainerId, String containerPort) {
         configuration = new DefaultConfigurationFactory().createConfiguration(
                 cargoContainerId, ContainerType.REMOTE, ConfigurationType.RUNTIME);
+        configuration.setProperty("cargo.jboss.management-http.port", containerPort);
+        configuration.setProperty("cargo.remote.password", TestConfig.getPassword());
+        configuration.setProperty("cargo.remote.username", TestConfig.getUsername());
+
         container = (RemoteContainer) new DefaultContainerFactory().createContainer(
                 cargoContainerId, ContainerType.REMOTE, configuration);
         deployer = new DefaultDeployerFactory().createDeployer(container);
@@ -57,7 +61,6 @@ public class ContainerRemoteController {
         }
 
         //configuration.setProperty(ServletPropertySet.PORT, "38230");
-        configuration.setProperty("cargo.jboss.management-http.port", containerPort);
 
         // WLS remote configuration
         if (TestConfig.isWebLogicHomeProvided()) {

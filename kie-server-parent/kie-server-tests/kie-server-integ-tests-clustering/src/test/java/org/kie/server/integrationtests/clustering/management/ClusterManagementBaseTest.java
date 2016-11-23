@@ -18,6 +18,7 @@ package org.kie.server.integrationtests.clustering.management;
 import java.util.HashMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.kie.server.api.model.KieContainerResource;
 import org.kie.server.api.model.KieContainerStatus;
@@ -25,6 +26,7 @@ import org.kie.server.api.model.ReleaseId;
 import org.kie.server.api.model.ServiceResponse;
 import org.kie.server.client.KieServicesClient;
 import org.kie.server.client.KieServicesConfiguration;
+import org.kie.server.client.KieServicesException;
 import org.kie.server.controller.api.model.spec.ContainerSpec;
 import org.kie.server.controller.api.model.spec.ServerTemplateKey;
 import org.kie.server.integrationtests.clustering.ClusterBaseTest;
@@ -63,9 +65,13 @@ public abstract class ClusterManagementBaseTest extends ClusterBaseTest {
 
     protected void checkContainerNotDeployedOnServerInstances(String containerId, KieServicesClient... clients) {
         for (KieServicesClient client : clients) {
-            ServiceResponse<KieContainerResource> clientResponse = client.getContainerInfo(containerId);
-            //fail, cause container is not started -> not deployed
-            checkFailedServiceResponse(clientResponse);
+            try {
+                ServiceResponse<KieContainerResource> clientResponse = client.getContainerInfo(containerId);
+                checkFailedServiceResponse(clientResponse);
+            }
+            catch(KieServicesException ex) {
+                assertTrue(ex.getMessage().startsWith("404"));
+            }
         }
     }
 
