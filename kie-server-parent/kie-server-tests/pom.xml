@@ -37,7 +37,7 @@
     <kie.server.testing.remote.repo.url>file://${kie.server.testing.remote.repo.dir}</kie.server.testing.remote.repo.url>
     <!-- Custom settings.xml used when building the testing kjars. By default there is no additional configuration needed,
          but for testing e.g. stated builds it is necessary to pass additional repository with the staged artifacts. -->
-    <kie.server.testing.kjars.build.settings.xml/>
+    <kie.server.testing.kjars.build.settings.xml/> <!-- can be deleted-->
     <org.jbpm.document.storage>${project.build.directory}/docs</org.jbpm.document.storage>
     <kie.server.router.url>http://localhost:${router.port}</kie.server.router.url>
     <!-- This property can be overriden to exclude specific test category according to specific needs. -->
@@ -65,7 +65,7 @@
     <module>kie-server-integ-tests-policy</module>
     <module>kie-server-integ-tests-router</module>
     <module>kie-server-integ-tests-case-id-generator</module>
-    <module>kie-server-integ-tests-clustering</module>
+    <module>kie-server-integ-tests-cluster</module>
   </modules>
 
   <dependencyManagement>
