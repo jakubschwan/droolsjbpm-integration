@@ -35,6 +35,7 @@ import org.kie.server.api.model.ReleaseId;
 import org.kie.server.api.model.instance.JobRequestInstance;
 import org.kie.server.api.model.instance.RequestInfoInstance;
 import org.kie.server.client.JobServicesClient;
+import org.kie.server.integrationtests.cluster.client.ClusterClientBaseTest;
 import org.kie.server.integrationtests.shared.KieServerDeployer;
 import org.kie.server.integrationtests.shared.KieServerSynchronization;
 

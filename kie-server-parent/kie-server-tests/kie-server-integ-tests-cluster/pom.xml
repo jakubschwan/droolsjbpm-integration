@@ -367,9 +367,9 @@
               <systemProperties>
                 <org.jbpm.server.ext.disabled>false</org.jbpm.server.ext.disabled>
                 <org.drools.server.ext.disabled>false</org.drools.server.ext.disabled>
-                <org.jbpm.ui.server.ext.disabled>true</org.jbpm.ui.server.ext.disabled>
-                <org.optaplanner.server.ext.disabled>true</org.optaplanner.server.ext.disabled>
-                <org.jbpm.case.server.ext.disabled>false</org.jbpm.case.server.ext.disabled>
+                <org.jbpm.ui.server.ext.disabled>false</org.jbpm.ui.server.ext.disabled>
+                <org.optaplanner.server.ext.disabled>false</org.optaplanner.server.ext.disabled>
+                <org.jbpm.case.server.ext.disabled>true</org.jbpm.case.server.ext.disabled>
                 <org.kie.server.location>${kie.server.base.http.url}</org.kie.server.location>
                 <org.kie.server.id>cluster-kie-server</org.kie.server.id>
                 <org.kie.server.controller>${kie.server.controller.base.http.url}</org.kie.server.controller>
@@ -377,6 +377,7 @@
                 <org.kie.server.controller.pwd>usetheforce123@</org.kie.server.controller.pwd>
                 <org.kie.server.user>yoda</org.kie.server.user>
                 <org.kie.server.pwd>usetheforce123@</org.kie.server.pwd>
+                <org.kie.server.sync.deploy>true</org.kie.server.sync.deploy>
                 <!--<org.kie.server.persistence.ds>${org.jbpm.persistence.ds}</org.kie.server.persistence.ds>
                 <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
                 <org.kie.server.persistence.tm>${container.tm}</org.kie.server.persistence.tm>-->
@@ -775,8 +776,7 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-failsafe-plugin</artifactId>
               <executions>
-                <execution>
-                  <goals combine.self="override"/>
+                <execution><!--skip-->
                 </execution>
               </executions>
               <goals/>

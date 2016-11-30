@@ -44,6 +44,8 @@ public class ClusterTestConstants {
     public static final String PROCESS_NAME_SIMPLE_SIGNAL = "simple-signal-process";
     public static final String PROCESS_NAME_SIMPLE_START_SIGNAL = "simple-start-signal-process";
     
+    public static final String PROCESS_ID_HIRING = "hiring";
+    
     public static final long SERVICE_TIMEOUT = 30000;
     public static final long TIMEOUT_BETWEEN_CALLS = 200;
 }

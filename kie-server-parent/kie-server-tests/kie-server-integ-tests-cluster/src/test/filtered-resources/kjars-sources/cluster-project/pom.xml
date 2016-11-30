@@ -9,9 +9,9 @@
     <version>1.0.0.Final</version>
   </parent>
 
-  <artifactId>start-timer</artifactId>
+  <artifactId>cluster-project</artifactId>
   <version>1.0.0.Final</version>
-  <name>start-timer</name>
+  <name>cluster-project</name>
 
   <build>
     <plugins>

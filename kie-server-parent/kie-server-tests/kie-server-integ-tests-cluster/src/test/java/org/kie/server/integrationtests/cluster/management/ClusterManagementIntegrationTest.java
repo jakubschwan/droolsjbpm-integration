@@ -252,7 +252,7 @@ public class ClusterManagementIntegrationTest extends ClusterManagementBaseTest 
         checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo);
         checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
     }
-    
+
     @Test
     public void testAddServerInstencesAfterStartOfContainer() throws Exception {
         turnOffBravoServer();

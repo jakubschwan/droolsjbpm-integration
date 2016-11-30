@@ -21,6 +21,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import org.codehaus.cargo.container.deployer.DeployableMonitor;
 import org.codehaus.cargo.container.deployer.URLDeployableMonitor;
 import org.junit.After;
@@ -51,6 +52,9 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
 
     @ClassRule
     public static ExternalResource StaticResource = new DBExternalResource();
+
+    private static final long SERVICE_TIMEOUT = 30000L;
+    private static final long TIMEOUT_BETWEEN_CALLS = 200L;
 
     protected static Logger logger = LoggerFactory.getLogger(ClusterBaseTest.class);
 
@@ -124,7 +128,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     }
 
     protected void createClientWithDefaultLoadBalancer() throws Exception {
-        //cient use defaul load balancer and is used on template A
+        //cient use defaul load balancer and is used on template one
         client = createDefaultClient(serversUrl);
     }
 
@@ -139,7 +143,6 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
         mgmtControllerClient.close();
     }
 
-    //delete this??
     protected void disposeAllClusterContainers(KieServicesClient... clients) {
         for (KieServicesClient kieServiceClient : clients) {
             try {
@@ -152,7 +155,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
                 }
             }
             } catch (KieServicesException ex) {
-                assertTrue(ex.getMessage(), ex.getMessage().startsWith("404"));
+                assertTrue("Failed: "+ex.getMessage(), ex.getMessage().contains("404"));
             }
         }
     }
@@ -187,6 +190,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     protected void turnOnCharlieServer() throws InterruptedException, MalformedURLException {
         if (!charliKieServerIsDeployed) {
             System.out.println("\n***** Turn on CHARLIE\n");
+            
             DeployableMonitor dm = new URLDeployableMonitor(new URL(kieServerUrlCharlie), 60000);
             ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 300));
             remoteControllerCharlie.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster2/deployments/kie-server-services.war", dm);
@@ -205,38 +209,43 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     }
 
     private void startSynchronization(String serverUrl, KieServicesClient serverClient) throws InterruptedException {
-        long SERVICE_TIMEOUT = 30000;
         long timeoutTime = Calendar.getInstance().getTimeInMillis() + SERVICE_TIMEOUT;
         while (Calendar.getInstance().getTimeInMillis() < timeoutTime) {
             if (serverClient == null) {
                 try {
                     serverClient = createDefaultClient(serverUrl);
                 } catch (Exception ex) {
-                    Thread.sleep(1000l);
+                    Thread.sleep(TIMEOUT_BETWEEN_CALLS);
                     continue;
                 }
             }
+            try {
             ServiceResponse<KieServerStateInfo> response = serverClient.getServerState();
             if(response.getType().equals(ServiceResponse.ResponseType.FAILURE) || response.getResult() == null) {
-                Thread.sleep(1000l);
+                Thread.sleep(TIMEOUT_BETWEEN_CALLS);
                 continue;
             }
             else {
                 try {
                     serverClient = createDefaultClient(serverUrl);
                 } catch (Exception ex) {
-                    Thread.sleep(1000l);
+                    Thread.sleep(TIMEOUT_BETWEEN_CALLS);
                     continue;
                 }
+            }            
+                String replyMsg = serverClient.getServerInfo().getMsg();
+                if(!replyMsg.contains("404")) {
+                    return;
+                }
+            } catch (Exception ex) {
+                Thread.sleep(TIMEOUT_BETWEEN_CALLS);
+                continue;
             }
-            if (!serverClient.getServerInfo().getMsg().startsWith("404")) {
-                return;
-            }
-            Thread.sleep(1000l);
+            Thread.sleep(TIMEOUT_BETWEEN_CALLS);
         }
     }
 
-    protected KieServicesClient createDefaultClient(String url) throws Exception  {
+    protected KieServicesClient createDefaultClient(String url) throws Exception {
         KieServicesConfiguration config;
         if (TestConfig.isLocalServer()) {
             config = KieServicesFactory.newRestConfiguration(url, null, null);
@@ -244,6 +253,27 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
             config = KieServicesFactory.newRestConfiguration(url, TestConfig.getUsername(), TestConfig.getPassword());
         }
         addExtraCustomClasses(extraClasses);
-        return createDefaultClient(config, marshallingFormat);
+        KieServicesClient client = waitToClientCreated(clientAlpha, config);
+        return client;//createDefaultClient(config, marshallingFormat);
+    }
+
+    
+
+    private KieServicesClient waitToClientCreated(KieServicesClient client, KieServicesConfiguration conf) throws InterruptedException, TimeoutException {
+        long timeoutTime = Calendar.getInstance().getTimeInMillis() + SERVICE_TIMEOUT;
+        while (Calendar.getInstance().getTimeInMillis() < timeoutTime) {
+            try {
+                client = createDefaultClient(conf, marshallingFormat);
+            } catch (Exception ex) {
+                Thread.sleep(TIMEOUT_BETWEEN_CALLS);
+                continue;
+            }
+            if (client != null) {
+                return client;
+            }
+            Thread.sleep(TIMEOUT_BETWEEN_CALLS);
+        }
+        throw new TimeoutException("Synchronization failed for defined timeout: " + SERVICE_TIMEOUT + " milliseconds.");
+
     }
 }

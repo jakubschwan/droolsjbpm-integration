@@ -18,26 +18,31 @@ package org.kie.server.integrationtests.cluster.client;
 import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.kie.api.task.model.Status;
 import org.kie.server.api.model.KieContainerStatus;
 import org.kie.server.api.model.ReleaseId;
-import org.kie.server.api.model.instance.ProcessInstance;
 import org.kie.server.api.model.instance.TaskSummary;
 import org.kie.server.controller.api.model.spec.ContainerSpec;
 import static org.kie.server.integrationtests.cluster.ClusterTestConstants.*;
+import org.kie.server.integrationtests.shared.KieServerDeployer;
 
 public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
 
     private static ReleaseId releaseId = new ReleaseId("org.kie.server.testing", "definition-project",
             "1.0.0.Final");
+
+    @BeforeClass
+    public static void buildAndDeployArtifacts() {
+        KieServerDeployer.buildAndDeployCommonMavenParent();
+        KieServerDeployer.buildAndDeployMavenProject(ClassLoader.class.getResource("/kjars-sources/definition-project").getFile());
+    }
 
     @Before
     public void deployContainer() {
@@ -106,84 +111,6 @@ public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
         }
     }
 
-    @Test
-    @Ignore
-    public void testFailTask() {
-        Long processInstanceId = processCharlieClient.startProcess(CONTAINER_ID, PROCESS_ID_USERTASK);
-        assertNotNull(processInstanceId);
-        assertTrue(processInstanceId.longValue() > 0);
-        try {
-            List<TaskSummary> taskList = taskCharlieClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
-            assertNotNull(taskList);
-            assertEquals(1, taskList.size());
-            TaskSummary taskSummary = taskList.get(0);
-            assertEquals("First task", taskSummary.getName());
-
-            // startTask and completeTask task
-            taskCharlieClient.startTask(CONTAINER_ID, taskSummary.getId(), USER_YODA);
-
-            turnOffCharlieServer();
-
-            Map<String, Object> taskOutcome = new HashMap<String, Object>();
-            taskOutcome.put("string_", "my custom data");
-//            taskOutcome.put("person_", createInstance(PERSON_CLASS_NAME, USER_MARY));
-
-            taskBravoClient.failTask(CONTAINER_ID, taskSummary.getId(), USER_YODA, taskOutcome);
-
-            taskList = taskBravoClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
-            assertNotNull(taskList);
-            assertEquals(1, taskList.size());
-            taskSummary = taskList.get(0);
-            assertEquals("Second task", taskSummary.getName());
-
-            try {
-                turnOnCharlieServer();
-            } catch (InterruptedException|MalformedURLException ex) {
-               fail("Server was not started due:\n" + ex);
-            }
-
-            taskList = taskCharlieClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
-            assertNotNull(taskList);
-            assertEquals(1, taskList.size());
-            taskSummary = taskList.get(0);
-            assertEquals("Second task", taskSummary.getName());
-        } finally {
-            processBravoClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
-        }
-    }
-
-    @Test
-    @Ignore
-    public void testTaskWithEscalation() throws Exception {
-        //separate class
-        turnOffCharlieServer();
-        
-        Long processInstanceId = processBravoClient.startProcess(CONTAINER_ID, PROCESS_ID_USERTASK_ESCALATION); //make a longer version
-        assertNotNull(processInstanceId);
-        assertTrue(processInstanceId.longValue() > 0);
-        
-        turnOffBravoServer();
-        //wait a while for task escalation
-        Thread.sleep(5000l);
-        //start other server
-        turnOnCharlieServer();
-        List<TaskSummary> taskList = taskCharlieClient.findTasksByStatusByProcessInstanceId(processInstanceId, null, 0, 10);
-        assertNotNull(taskList);
-        assertEquals(1, taskList.size());
-        TaskSummary taskSummary = taskList.get(0);
-        assertEquals(CONTAINER_ID, taskSummary.getContainerId());
-        assertEquals(processInstanceId, taskSummary.getProcessInstanceId());
-        assertEquals("Failed" /* or "fail" */, taskSummary.getStatus()); //search for better one
-        
-        ProcessInstance pi = processCharlieClient.getProcessInstance(CONTAINER_ID, processInstanceId);
-        assertNotNull(pi);
-        assertEquals(processInstanceId, pi.getId());
-        assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_SUSPENDED, pi.getState().intValue());
-        
-        //human task with escalation
-        //start process and tunr of server instances
-        //after restart task should be escalated -> ended
-    }
 
     private void checkTaskNameAndStatus(TaskSummary taskSummary, String name, Status status) {
         assertNotNull(taskSummary);

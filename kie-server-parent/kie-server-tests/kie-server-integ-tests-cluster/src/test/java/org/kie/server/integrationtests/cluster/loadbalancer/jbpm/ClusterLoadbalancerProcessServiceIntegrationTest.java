@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kie.server.integrationtests.cluster.loadbalancer;
+package org.kie.server.integrationtests.cluster.loadbalancer.jbpm;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import static org.junit.Assert.assertEquals;
@@ -24,40 +23,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.kie.internal.runtime.conf.MergeMode;
-import org.kie.internal.runtime.conf.RuntimeStrategy;
-import org.kie.server.api.model.KieContainerStatus;
 import org.kie.server.api.model.instance.ProcessInstance;
-import org.kie.server.controller.api.model.spec.Capability;
-import org.kie.server.controller.api.model.spec.ContainerConfig;
-import org.kie.server.controller.api.model.spec.ContainerSpec;
-import org.kie.server.controller.api.model.spec.ProcessConfig;
 import org.kie.server.integrationtests.category.Smoke;
+import org.kie.server.integrationtests.cluster.loadbalancer.ClusterLoadbalancerBaseTest;
 import static org.kie.server.integrationtests.cluster.ClusterTestConstants.*;
 import org.kie.server.integrationtests.config.TestConfig;
-import org.kie.server.integrationtests.shared.KieServerSynchronization;
 
 public class ClusterLoadbalancerProcessServiceIntegrationTest extends ClusterLoadbalancerBaseTest {
-
-    @Before
-    public void beforeTests() throws Exception {
-        Map<Capability, ContainerConfig> config = new HashMap<>();
-        config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.PER_PROCESS_INSTANCE.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
-
-        ContainerSpec containerSpec = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, config);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
-
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
-
-        //make sure, that contianer is deployed on both servers
-        KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
-        KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
-        KieServerSynchronization.waitForKieServerSynchronization(client, 1);
-        System.out.println(client.listContainers().getResult().getContainers());
-    }
 
     @Test
     @Category(Smoke.class)
@@ -130,6 +105,56 @@ public class ClusterLoadbalancerProcessServiceIntegrationTest extends ClusterLoa
         }
 
     }
+    
+    @Test
+    public void testSignalContainer() throws Exception {
+        Long processInstanceId = processClient.startProcess(CONTAINER_ID, PROCESS_ID_SIMPLE_SIGNAL);
+
+        assertNotNull(processInstanceId);
+        assertTrue(processInstanceId.longValue() > 0);
+
+        try {
+            checkAvailableSignals(CONTAINER_ID, processInstanceId);
+
+            processClient.signal(CONTAINER_ID, "event", "");
+
+            ProcessInstance pi = processClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+            assertNotNull(pi);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, pi.getState().intValue());
+        } catch (Exception e){
+            processClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
+            e.printStackTrace();
+            fail(e.getMessage());
+        }
+        
+    }
+    
+    @Test
+    @Ignore //add for test kjar with start timer process
+    public void testSignalStartProcess() throws Exception {
+        try {
+
+            List<Integer> status = new ArrayList<Integer>();
+            status.add(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE);
+            status.add(org.kie.api.runtime.process.ProcessInstance.STATE_ABORTED);
+            status.add(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED);
+
+            List<ProcessInstance> processInstances = queryClient.findProcessInstancesByProcessId(PROCESS_ID_SIGNAL_START, status, 0, 10);
+            int initial = processInstances.size();
+
+           // Object person = createPersonInstance(USER_JOHN);
+            processClient.signal(CONTAINER_ID, "start-process", "");
+
+            processInstances = queryClient.findProcessInstancesByProcessId(PROCESS_ID_SIGNAL_START, status, 0, 10);
+            assertNotNull(processInstances);
+            assertEquals(initial + 1, processInstances.size());
+
+        } catch (Exception e){
+            e.printStackTrace();
+            fail(e.getMessage());
+        }
+
+    }
 
     private void checkAvailableSignals(String containerId, Long processInstanceId) {
         List<String> availableSignals = processClient.getAvailableSignals(containerId, processInstanceId);
@@ -137,4 +162,6 @@ public class ClusterLoadbalancerProcessServiceIntegrationTest extends ClusterLoa
         assertEquals(1, availableSignals.size());
         assertTrue(availableSignals.contains("event"));
     }
+    
+    
 }

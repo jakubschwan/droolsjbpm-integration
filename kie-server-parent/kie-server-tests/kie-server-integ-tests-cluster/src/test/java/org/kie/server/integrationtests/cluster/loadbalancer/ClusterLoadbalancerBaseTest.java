@@ -15,18 +15,32 @@
  */
 package org.kie.server.integrationtests.cluster.loadbalancer;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.kie.api.KieServices;
 import org.kie.api.runtime.KieContainer;
+import org.kie.internal.runtime.conf.MergeMode;
+import org.kie.internal.runtime.conf.RuntimeStrategy;
+import org.kie.server.api.model.KieContainerStatus;
 import org.kie.server.api.model.ReleaseId;
 import org.kie.server.client.DocumentServicesClient;
 import org.kie.server.client.JobServicesClient;
 import org.kie.server.client.ProcessServicesClient;
 import org.kie.server.client.QueryServicesClient;
+import org.kie.server.client.SolverServicesClient;
+import org.kie.server.client.UIServicesClient;
 import org.kie.server.client.UserTaskServicesClient;
+import org.kie.server.controller.api.model.spec.Capability;
+import org.kie.server.controller.api.model.spec.ContainerConfig;
+import org.kie.server.controller.api.model.spec.ContainerSpec;
+import org.kie.server.controller.api.model.spec.ProcessConfig;
 import org.kie.server.integrationtests.cluster.ClusterBaseTest;
+import static org.kie.server.integrationtests.cluster.ClusterTestConstants.CONTAINER_ID;
+import static org.kie.server.integrationtests.cluster.ClusterTestConstants.CONTAINER_NAME;
 import org.kie.server.integrationtests.shared.KieServerDeployer;
+import org.kie.server.integrationtests.shared.KieServerSynchronization;
 
 public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
 
@@ -40,6 +54,22 @@ public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
 
         kieContainer = KieServices.Factory.get().newKieContainer(releaseId);
     }
+    
+    @Before
+    public void beforeTests() throws Exception {
+        Map<Capability, ContainerConfig> config = new HashMap<>();
+        config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.SINGLETON.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
+
+        ContainerSpec containerSpec = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, config);
+        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
+
+        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+
+        //make sure, that contianer is deployed on both servers
+        KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
+        KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
+        KieServerSynchronization.waitForKieServerSynchronization(client, 1);
+    }
 
     //client with defaultLoadBalancer
     protected ProcessServicesClient processClient;
@@ -47,6 +77,8 @@ public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
     protected QueryServicesClient queryClient;
     protected JobServicesClient jobServicesClient;
     protected DocumentServicesClient documentClient;
+    protected UIServicesClient uiServicesClient;
+    protected SolverServicesClient solverClient;
 
     @Before
     public void setupClusterClients() throws Exception {
@@ -56,5 +88,7 @@ public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
         queryClient = client.getServicesClient(QueryServicesClient.class);
         jobServicesClient = client.getServicesClient(JobServicesClient.class);
         documentClient = client.getServicesClient(DocumentServicesClient.class);
+        uiServicesClient = client.getServicesClient(UIServicesClient.class);
+        solverClient = client.getServicesClient(SolverServicesClient.class);
     }
 }

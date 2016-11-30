@@ -16,49 +16,20 @@
 package org.kie.server.integrationtests.cluster.loadbalancer;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import org.junit.Before;
 import org.junit.Test;
-import org.kie.internal.runtime.conf.MergeMode;
-import org.kie.internal.runtime.conf.RuntimeStrategy;
-import org.kie.server.api.model.KieContainerStatus;
 import org.kie.server.api.model.definition.ProcessDefinition;
 import org.kie.server.client.QueryServicesClient;
-import org.kie.server.controller.api.model.spec.Capability;
-import org.kie.server.controller.api.model.spec.ContainerConfig;
-import org.kie.server.controller.api.model.spec.ContainerSpec;
-import org.kie.server.controller.api.model.spec.ProcessConfig;
 import static org.kie.server.integrationtests.cluster.ClusterTestConstants.*;
-import org.kie.server.integrationtests.shared.KieServerAssert;
-import org.kie.server.integrationtests.shared.KieServerSynchronization;
 
 public class ClusterLoadbalancerProcessDefinitionIntegrationTest extends ClusterLoadbalancerBaseTest {
-    @Before
-    public void beforeTests() throws Exception {
-        disposeAllClusterContainers(clientBravo, clientCharlie, clientAlpha);
-        disposeAllClusterContainers();
-
-        Map<Capability, ContainerConfig> config = new HashMap<>();
-        config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.SINGLETON.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
-
-        ContainerSpec containerSpec = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, config);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
-    }
 
     @Test
     public void testListProcessDefinition() throws Exception {
         List<ProcessDefinition> processDefinitions = queryClient.findProcesses(0, 20);
-        KieServerAssert.assertNullOrEmpty("Founded process definition, but no containers are deployed", processDefinitions);
-        
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
-        KieServerSynchronization.waitForKieServerSynchronization(client, 1);
-        
-        processDefinitions = queryClient.findProcesses(0, 20);
         assertNotNull(processDefinitions);
         
         assertEquals(13, processDefinitions.size());
@@ -107,5 +78,6 @@ public class ClusterLoadbalancerProcessDefinitionIntegrationTest extends Cluster
         assertTrue(processIds.contains(PROCESS_ID_TIMER));
         assertTrue(processIds.contains(PROCESS_ID_USERTASK_ESCALATION));
         assertTrue(processIds.contains(PROCESS_ID_XYZ_TRANSLATIONS));
+        assertTrue(processIds.contains(PROCESS_ID_HIRING));
     }
 }

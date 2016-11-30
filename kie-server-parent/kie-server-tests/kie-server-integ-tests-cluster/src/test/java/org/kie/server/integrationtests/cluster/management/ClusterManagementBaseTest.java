@@ -70,7 +70,7 @@ public abstract class ClusterManagementBaseTest extends ClusterBaseTest {
                 checkFailedServiceResponse(clientResponse);
             }
             catch(KieServicesException ex) {
-                assertTrue(ex.getMessage().startsWith("404"));
+                assertTrue(ex.getMessage().contains("404"));
             }
         }
     }
