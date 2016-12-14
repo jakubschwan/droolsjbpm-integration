@@ -32,7 +32,7 @@ public class ClusterLoadbalancerProcessDefinitionIntegrationTest extends Cluster
         List<ProcessDefinition> processDefinitions = queryClient.findProcesses(0, 20);
         assertNotNull(processDefinitions);
         
-        assertEquals(13, processDefinitions.size());
+        assertEquals(14, processDefinitions.size());
         List<String> processIds = collectDefinitions(processDefinitions);
         checkProcessDefinitions(processIds);
 
@@ -43,7 +43,7 @@ public class ClusterLoadbalancerProcessDefinitionIntegrationTest extends Cluster
         processIds = collectDefinitions(processDefinitions);
         assertTrue(processIds.contains(PROCESS_ID_ASYNC_SCRIPT));
         assertTrue(processIds.contains(PROCESS_ID_SIGNAL_START));
-        assertTrue(processIds.contains(PROCESS_ID_TIMER));
+        assertTrue(processIds.contains(PROCESS_ID_HIRING));
 
         processDefinitions = queryClient.findProcesses(0, 3, QueryServicesClient.SORT_BY_NAME, false);
         assertNotNull(processDefinitions);

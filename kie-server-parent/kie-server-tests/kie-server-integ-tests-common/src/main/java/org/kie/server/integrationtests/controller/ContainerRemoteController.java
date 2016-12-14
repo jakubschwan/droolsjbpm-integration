@@ -79,7 +79,8 @@ public class ContainerRemoteController {
     public void deployWarFile(String context, String warFilePath, DeployableMonitor dm) {
         WAR deployable = (WAR) new DefaultDeployableFactory().createDeployable(container.getId(), warFilePath, DeployableType.WAR);
         deployable.setContext(context);
-        //DeployableMonitor dm = new UrlPathDeployableMonitor(configuration, System.getProperty("kie.server.context")+"/services/rest/server", 60000);
+        
+        DeployableMonitor dmm = new UrlPathDeployableMonitor(configuration, System.getProperty("kie.server.context")+"/services/rest/server", 60000);
         deployer.deploy(deployable, dm);
     }
 }

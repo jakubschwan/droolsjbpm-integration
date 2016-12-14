@@ -300,14 +300,13 @@ public class ClusterProcessServiceIntegrationTest extends ClusterClientBaseTest 
         mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
         mgmtControllerClient.startContainer(templateOne.getId(), startTimerContainerId);
         long startTimeInMillis = System.currentTimeMillis();
+        int processInstanceCount = 0;
 
         KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
         KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
 
-        int processInstanceCount = 0;
-
         turnOffCharlieServer();
-        //normla starting
+
         List<ProcessInstance> processInstancesList = queryBravoClient.findProcessInstances(0, 50);
         assertNotNull(processInstancesList);
         assertTrue(processInstanceCount < processInstancesList.size());

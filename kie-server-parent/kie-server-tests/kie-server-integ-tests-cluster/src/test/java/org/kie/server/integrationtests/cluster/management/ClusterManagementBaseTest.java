@@ -16,6 +16,7 @@
 package org.kie.server.integrationtests.cluster.management;
 
 import java.util.HashMap;
+import java.util.logging.Level;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +33,7 @@ import org.kie.server.controller.api.model.spec.ServerTemplateKey;
 import org.kie.server.integrationtests.cluster.ClusterBaseTest;
 import org.kie.server.integrationtests.shared.KieServerAssert;
 import org.kie.server.integrationtests.shared.KieServerDeployer;
+import org.kie.server.integrationtests.shared.KieServerSynchronization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +79,11 @@ public abstract class ClusterManagementBaseTest extends ClusterBaseTest {
 
     protected void checkContainerDeployedOnServerInstances(String containerId, KieServicesClient... clients) {
         for (KieServicesClient client : clients) {
+            try {
+                KieServerSynchronization.waitForKieServerSynchronization(client, 1);
+            } catch (Exception ex) {
+                logger.warn("Kie server synchronization failed due: ", ex);
+            }
             ServiceResponse<KieContainerResource> clientResponse = client.getContainerInfo(containerId);
             checkSuccessServiceResponse(clientResponse, KieContainerStatus.STARTED);
         }

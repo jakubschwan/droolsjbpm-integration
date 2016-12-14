@@ -45,7 +45,7 @@ public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
     }
 
     @Before
-    public void deployContainer() {
+    public void deployContainer() throws Exception {
         ContainerSpec containerToDeploy = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, new HashMap());
         mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
         mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
