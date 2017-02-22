@@ -13,11 +13,9 @@
     <description>KIE Execution Server Integration Tests (REST, JMS). Can be configured to run on different supported containers.</description>
     
     <properties>
-        
         <containers.dir>${project.build.directory}/cluster-servers</containers.dir>
         <configurations.dir>${project.build.directory}/cluster-configurations</configurations.dir>
         <container.profile.dir>${configurations.dir}/profiles</container.profile.dir>
-        
         <!-- Datasource properties, servers in cluster need same db -->
         <org.jbpm.persistence.dialect>org.hibernate.dialect.H2Dialect</org.jbpm.persistence.dialect>
         <org.jbpm.datasource.connection.url>jdbc:h2:file:../database/test2-db;AUTO_SERVER=TRUE</org.jbpm.datasource.connection.url>
@@ -32,10 +30,8 @@
         <org.jbpm.persistence.ds/>
         
         <container.port>38080</container.port>
-        <cluster.one.port>38230</cluster.one.port> <!-- ofset 150 -->
-        <cluster.two.port>38380</cluster.two.port> <!-- ofset 300 -->
-        <kie.server.cluster.one.http.url>http://${container.hostname}:${cluster.one.port}/${kie.server.context}/services/rest/server</kie.server.cluster.one.http.url>
-        <kie.server.cluster.two.http.url>http://${container.hostname}:${cluster.two.port}/${kie.server.context}/services/rest/server</kie.server.cluster.two.http.url>
+        <container.offset.port>38230</container.offset.port> <!-- ofset 150 -->
+        <kie.server.cluster.offset.http.url>http://${container.hostname}:${container.offset.port}/${kie.server.context}/services/rest/server</kie.server.cluster.offset.http.url>
     </properties>
 
   <dependencyManagement>
@@ -336,7 +332,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
             <systemPropertyVariables>
-              <!-- test properties -->
+              <!-- Test properties -->
               <cluster.configuration.dir>${container.profile.dir}</cluster.configuration.dir>
               <cluster.container.dir>${containers.dir}</cluster.container.dir>
               <!-- Values are supplied by specific profiles -->
@@ -347,8 +343,7 @@
               <weblogic.home>${weblogic.home}</weblogic.home>
               <kie.server.remoting.url>${kie.server.remoting.url}</kie.server.remoting.url>
               <kie.server.base.http.url>${kie.server.base.http.url}</kie.server.base.http.url>
-              <kie.server.cluster.one.http.url>${kie.server.cluster.one.http.url}</kie.server.cluster.one.http.url>
-              <kie.server.cluster.two.http.url>${kie.server.cluster.two.http.url}</kie.server.cluster.two.http.url>
+              <kie.server.cluster.offset.http.url>${kie.server.cluster.offset.http.url}</kie.server.cluster.offset.http.url>
               <kie.server.context.factory>${kie.server.context.factory}</kie.server.context.factory>
               <kie.server.connection.factory>${kie.server.connection.factory}</kie.server.connection.factory>
               <kie.server.jndi.request.queue>${kie.server.jndi.request.queue}</kie.server.jndi.request.queue>
@@ -365,29 +360,28 @@
           <configuration>
             <container>
               <systemProperties>
+                <!-- Kie server extensions -->
                 <org.jbpm.server.ext.disabled>false</org.jbpm.server.ext.disabled>
                 <org.drools.server.ext.disabled>false</org.drools.server.ext.disabled>
                 <org.jbpm.ui.server.ext.disabled>false</org.jbpm.ui.server.ext.disabled>
                 <org.optaplanner.server.ext.disabled>false</org.optaplanner.server.ext.disabled>
                 <org.jbpm.case.server.ext.disabled>true</org.jbpm.case.server.ext.disabled>
+                <!-- Kie server configuration -->
                 <org.kie.server.location>${kie.server.base.http.url}</org.kie.server.location>
-                <org.kie.server.id>cluster-kie-server</org.kie.server.id>
+                <org.kie.server.id>kie-server</org.kie.server.id>
                 <org.kie.server.controller>${kie.server.controller.base.http.url}</org.kie.server.controller>
                 <org.kie.server.controller.user>yoda</org.kie.server.controller.user>
                 <org.kie.server.controller.pwd>usetheforce123@</org.kie.server.controller.pwd>
                 <org.kie.server.user>yoda</org.kie.server.user>
                 <org.kie.server.pwd>usetheforce123@</org.kie.server.pwd>
                 <org.kie.server.sync.deploy>true</org.kie.server.sync.deploy>
-                <!--<org.kie.server.persistence.ds>${org.jbpm.persistence.ds}</org.kie.server.persistence.ds>
-                <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
-                <org.kie.server.persistence.tm>${container.tm}</org.kie.server.persistence.tm>-->
               </systemProperties>
               <dependencies>
-              <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-              </dependency>
-            </dependencies>
+                <dependency>
+                  <groupId>com.h2database</groupId>
+                  <artifactId>h2</artifactId>
+                </dependency>
+              </dependencies>
             </container>
             <deployables combine.children="append">
               <deployable>
@@ -435,7 +429,7 @@
     <profile>
       <id>eap7</id>
       <properties>
-        <org.jbpm.cluster.persistence.ds>jboss/datasources/jbpm</org.jbpm.cluster.persistence.ds>
+        <org.jbpm.persistence.ds>jboss/datasources/jbpm</org.jbpm.persistence.ds>
       </properties>
       <build>
         <pluginManagement>
@@ -448,143 +442,79 @@
                   <type>installed</type>
                   <zipUrlInstaller>
                     <url>${eap7.download.url}</url>
-                    <extractDir>${containers.dir}/default</extractDir>
+                    <extractDir>${containers.dir}/default-kie-server</extractDir>
                   </zipUrlInstaller>
+                  <systemProperties>
+                    <org.kie.server.persistence.ds>${org.jbpm.persistence.ds}</org.kie.server.persistence.ds>
+                    <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
+                  </systemProperties>
                 </container>
                 <configuration>
-                  <home>${container.profile.dir}/default</home>
+                  <home>${container.profile.dir}/default-kie-server</home>
+                  <properties>
+                    <cargo.jboss.configuration>standalone-full</cargo.jboss.configuration>
+                    <cargo.datasource.datasource.jbpm>
+                      cargo.datasource.driver=${org.jbpm.datasource.driver.class}|
+                      cargo.datasource.url=${org.jbpm.datasource.connection.url}|
+                      cargo.datasource.jndi=${org.jbpm.persistence.ds}|
+                      cargo.datasource.username=${org.jbpm.datasource.username}|
+                      cargo.datasource.password=${org.jbpm.datasource.password}|
+                      cargo.datasource.transactionsupport=XA_TRANSACTION
+                    </cargo.datasource.datasource.jbpm>
+                  </properties>
                 </configuration>
               </configuration>
-              <executions combine.self="override">
+              <executions>
                 <execution>
-                  <id>start-first-container</id>
+                  <id>start-container-cluster</id>
                   <phase>pre-integration-test</phase>
                   <configuration>
-                      <container>
-                          <type>installed</type>
-                          <zipUrlInstaller>
-                              <url>${eap7.download.url}</url>
-                              <extractDir>${containers.dir}/cluster1</extractDir>
-                          </zipUrlInstaller>
-                          <systemProperties>
-                            <org.kie.server.id>templateOne</org.kie.server.id>
-                            <org.kie.server.location>${kie.server.cluster.one.http.url}</org.kie.server.location>
-                            <org.kie.executor.jms>false</org.kie.executor.jms>
-                            <org.kie.server.persistence.ds>${org.jbpm.cluster.persistence.ds}</org.kie.server.persistence.ds>
-                            <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
-                          </systemProperties>
-                      </container>
-                      <deployables combine.self="override">
-                        <deployable>
-                          <groupId>${project.groupId}</groupId>
-                          <artifactId>kie-server</artifactId>
-                          <!-- default, may be overridden in container specific profiles -->
-                          <classifier>${kie.server.classifier}</classifier>
-                          <type>war</type>
-                          <properties>
-                            <context>${kie.server.context}</context>
-                          </properties>
-                          <pingUrlPath>/${kie.server.context}/services/rest/server</pingUrlPath>
-                          <pingTimeout>60000</pingTimeout>
-                        </deployable>
-                      </deployables>
-                      <configuration>
-                          <home>${container.profile.dir}/cluster1</home>
-                          <properties>
-                              <cargo.jboss.configuration>standalone-full</cargo.jboss.configuration>
-                              <cargo.jvmargs>-Xmx1024m</cargo.jvmargs>
-                              <cargo.port.offset>150</cargo.port.offset>
-                              <cargo.datasource.datasource.jbpm>
-                                cargo.datasource.driver=${org.jbpm.datasource.driver.class}|
-                                cargo.datasource.url=${org.jbpm.datasource.connection.url}|
-                                cargo.datasource.jndi=${org.jbpm.cluster.persistence.ds}|
-                                cargo.datasource.username=${org.jbpm.datasource.username}|
-                                cargo.datasource.password=${org.jbpm.datasource.password}|
-                                cargo.datasource.transactionsupport=XA_TRANSACTION
-                            </cargo.datasource.datasource.jbpm>
-                          </properties>
-                      </configuration>         
+                    <!-- Specific configuration for container -->
+                    <container>
+                      <type>installed</type>
+                      <zipUrlInstaller>
+                        <url>${eap7.download.url}</url>
+                        <extractDir>${containers.dir}/cluster-kie-server</extractDir>
+                      </zipUrlInstaller>
+                      <systemProperties>
+                        <org.kie.server.location>${kie.server.cluster.offset.http.url}</org.kie.server.location>
+                        <org.kie.executor.jms>false</org.kie.executor.jms>
+                      </systemProperties>
+                    </container>
+                    <deployables combine.self="override">
+                      <deployable>
+                        <groupId>${project.groupId}</groupId>
+                        <artifactId>kie-server</artifactId>
+                        <!-- default, may be overridden in container specific profiles -->
+                        <classifier>${kie.server.classifier}</classifier>
+                        <type>war</type>
+                        <properties>
+                          <context>${kie.server.context}</context>
+                        </properties>
+                        <pingUrlPath>/${kie.server.context}/services/rest/server</pingUrlPath>
+                        <pingTimeout>60000</pingTimeout>
+                      </deployable>
+                    </deployables>
+                    <configuration>
+                      <home>${container.profile.dir}/cluster-kie-server</home>
+                      <properties>
+                        <cargo.port.offset>150</cargo.port.offset>
+                      </properties>
+                    </configuration>
                   </configuration>
                   <goals>
                     <goal>start</goal>
                   </goals>
                 </execution>
                 <execution>
-                  <id>start-second-container</id>
-                  <phase>pre-integration-test</phase>
-                  <configuration>
-                      <container>
-                          <type>installed</type>
-                          <zipUrlInstaller>
-                              <url>${eap7.download.url}</url>
-                              <extractDir>${containers.dir}/cluster2</extractDir>
-                          </zipUrlInstaller>
-                          <systemProperties>
-                              <org.kie.server.id>templateOne</org.kie.server.id>
-                              <org.kie.server.location>${kie.server.cluster.two.http.url}</org.kie.server.location>
-                              <org.kie.executor.jms>false</org.kie.executor.jms>
-                              <org.kie.server.persistence.ds>${org.jbpm.cluster.persistence.ds}</org.kie.server.persistence.ds>
-                              <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
-                          </systemProperties>
-                      </container>
-                      <deployables combine.self="override">
-                        <deployable>
-                          <groupId>${project.groupId}</groupId>
-                          <artifactId>kie-server</artifactId>
-                          <!-- default, may be overridden in container specific profiles -->
-                          <classifier>${kie.server.classifier}</classifier>
-                          <type>war</type>
-                          <properties>
-                            <context>${kie.server.context}</context>
-                          </properties>
-                          <pingUrlPath>/${kie.server.context}/services/rest/server</pingUrlPath>
-                          <pingTimeout>60000</pingTimeout>
-                        </deployable>
-                      </deployables>
-                      <configuration>
-                          <home>${container.profile.dir}/cluster2</home>
-                          <properties>
-                              <cargo.jboss.configuration>standalone-full</cargo.jboss.configuration>
-                              <cargo.jvmargs>-Xmx1024m</cargo.jvmargs>
-                              <cargo.port.offset>300</cargo.port.offset>
-                              <cargo.datasource.datasource.jbpm>
-                                cargo.datasource.driver=${org.jbpm.datasource.driver.class}|
-                                cargo.datasource.url=${org.jbpm.datasource.connection.url}|
-                                cargo.datasource.jndi=${org.jbpm.cluster.persistence.ds}|
-                                cargo.datasource.username=${org.jbpm.datasource.username}|
-                                cargo.datasource.password=${org.jbpm.datasource.password}|
-                                cargo.datasource.transactionsupport=XA_TRANSACTION
-                              </cargo.datasource.datasource.jbpm>
-                          </properties>
-                      </configuration>
-                  </configuration>
-                  <goals>
-                    <goal>start</goal>
-                  </goals>
-                </execution>
-                <execution>
-                  <id>stop-first-container</id>
+                  <id>stop-container-cluster</id>
                   <phase>post-integration-test</phase>
                   <configuration>
                     <configuration>
-                          <properties>
-                              <cargo.port.offset>150</cargo.port.offset>
-                          </properties>
-                      </configuration>
-                  </configuration>
-                  <goals>
-                    <goal>stop</goal>
-                  </goals>
-                </execution>
-                <execution>
-                  <id>stop-second-container</id>
-                  <phase>post-integration-test</phase>
-                  <configuration>
-                    <configuration>
-                          <properties>
-                              <cargo.port.offset>300</cargo.port.offset>
-                          </properties>
-                      </configuration>
+                      <properties>
+                        <cargo.port.offset>150</cargo.port.offset>
+                      </properties>
+                    </configuration>
                   </configuration>
                   <goals>
                     <goal>stop</goal>
@@ -596,11 +526,11 @@
         </pluginManagement>
       </build>
     </profile>
-    
+
     <profile>
       <id>wildfly10</id>
       <properties>
-          <org.jbpm.cluster.persistence.ds>jboss/datasources/jbpm</org.jbpm.cluster.persistence.ds>
+        <org.jbpm.persistence.ds>jboss/datasources/jbpm</org.jbpm.persistence.ds>
       </properties>
       <build>
         <pluginManagement>
@@ -615,147 +545,79 @@
                     <groupId>org.wildfly</groupId>
                     <artifactId>wildfly-dist</artifactId>
                     <version>${version.wildfly10}</version>
-                    <extractDir>${containers.dir}/default</extractDir>
+                    <extractDir>${containers.dir}/default-kie-server</extractDir>
                   </artifactInstaller>
+                  <systemProperties>
+                    <org.kie.server.persistence.ds>${org.jbpm.persistence.ds}</org.kie.server.persistence.ds>
+                    <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
+                  </systemProperties>
                 </container>
                 <configuration>
-                  <home>${container.profile.dir}/default</home>
+                  <home>${container.profile.dir}/default-kie-server</home>
+                  <properties>
+                    <cargo.jboss.configuration>standalone-full</cargo.jboss.configuration>
+                    <cargo.datasource.datasource.jbpm>
+                      cargo.datasource.driver=${org.jbpm.datasource.driver.class}|
+                      cargo.datasource.url=${org.jbpm.datasource.connection.url}|
+                      cargo.datasource.jndi=${org.jbpm.persistence.ds}|
+                      cargo.datasource.username=${org.jbpm.datasource.username}|
+                      cargo.datasource.password=${org.jbpm.datasource.password}|
+                      cargo.datasource.transactionsupport=XA_TRANSACTION
+                    </cargo.datasource.datasource.jbpm>
+                  </properties>
                 </configuration>
               </configuration>
               <executions combine.children="append">
                 <execution>
-                  <id>start-first-container</id>
+                  <id>start-container-cluster</id>
                   <phase>pre-integration-test</phase>
                   <configuration>
-                      <container>
-                          <type>installed</type>
-                          <artifactInstaller>
-                            <groupId>org.wildfly</groupId>
-                            <artifactId>wildfly-dist</artifactId>
-                            <version>${version.wildfly10}</version>
-                            <extractDir>${containers.dir}/default</extractDir>
-                          </artifactInstaller>
-                          <systemProperties>
-                            <org.kie.server.id>templateOne</org.kie.server.id>
-                            <org.kie.server.location>${kie.server.cluster.one.http.url}</org.kie.server.location>
-                            <org.kie.executor.jms>false</org.kie.executor.jms>
-                            <org.kie.server.persistence.ds>${org.jbpm.cluster.persistence.ds}</org.kie.server.persistence.ds>
-                            <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
-                          </systemProperties>
-                      </container>
-                      <deployables combine.self="override">
-                        <deployable>
-                          <groupId>${project.groupId}</groupId>
-                          <artifactId>kie-server</artifactId>
-                          <!-- default, may be overridden in container specific profiles -->
-                          <classifier>${kie.server.classifier}</classifier>
-                          <type>war</type>
-                          <properties>
-                            <context>${kie.server.context}</context>
-                          </properties>
-                          <pingUrlPath>/${kie.server.context}/services/rest/server</pingUrlPath>
-                          <pingTimeout>60000</pingTimeout>
-                        </deployable>
-                      </deployables>
-                      <configuration>
-                          <home>${container.profile.dir}/cluster1</home>
-                          <properties>
-                              <cargo.jboss.configuration>standalone-full</cargo.jboss.configuration>
-                              <cargo.jvmargs>-Xmx1024m</cargo.jvmargs>
-                              <cargo.port.offset>150</cargo.port.offset>
-                              <cargo.datasource.datasource.jbpm>
-                                cargo.datasource.driver=${org.jbpm.datasource.driver.class}|
-                                cargo.datasource.url=${org.jbpm.datasource.connection.url}|
-                                cargo.datasource.jndi=${org.jbpm.cluster.persistence.ds}|
-                                cargo.datasource.username=${org.jbpm.datasource.username}|
-                                cargo.datasource.password=${org.jbpm.datasource.password}|
-                                cargo.datasource.transactionsupport=XA_TRANSACTION
-                            </cargo.datasource.datasource.jbpm>
-                          </properties>
-                      </configuration>         
+                    <container>
+                      <type>installed</type>
+                      <artifactInstaller>
+                        <groupId>org.wildfly</groupId>
+                        <artifactId>wildfly-dist</artifactId>
+                        <version>${version.wildfly10}</version>
+                        <extractDir>${containers.dir}/default-kie-server</extractDir>
+                      </artifactInstaller>
+                      <systemProperties>
+                        <org.kie.server.location>${kie.server.cluster.offset.http.url}</org.kie.server.location>
+                      </systemProperties>
+                    </container>
+                    <deployables combine.self="override">
+                      <deployable>
+                        <groupId>${project.groupId}</groupId>
+                        <artifactId>kie-server</artifactId>
+                        <!-- default, may be overridden in container specific profiles -->
+                        <classifier>${kie.server.classifier}</classifier>
+                        <type>war</type>
+                        <properties>
+                          <context>${kie.server.context}</context>
+                        </properties>
+                        <pingUrlPath>/${kie.server.context}/services/rest/server</pingUrlPath>
+                        <pingTimeout>60000</pingTimeout>
+                      </deployable>
+                    </deployables>
+                    <configuration>
+                      <home>${container.profile.dir}/cluster-kie-server</home>
+                      <properties>
+                        <cargo.port.offset>150</cargo.port.offset>
+                      </properties>
+                    </configuration>
                   </configuration>
                   <goals>
                     <goal>start</goal>
                   </goals>
                 </execution>
                 <execution>
-                  <id>start-second-container</id>
-                  <phase>pre-integration-test</phase>
-                  <configuration>
-                      <container>
-                          <type>installed</type>
-                          <artifactInstaller>
-                            <groupId>org.wildfly</groupId>
-                            <artifactId>wildfly-dist</artifactId>
-                            <version>${version.wildfly10}</version>
-                            <extractDir>${containers.dir}/default</extractDir>
-                          </artifactInstaller>
-                          <systemProperties>
-                              <org.kie.server.id>templateOne</org.kie.server.id>
-                              <org.kie.server.location>${kie.server.cluster.two.http.url}</org.kie.server.location>
-                              <org.kie.executor.jms>false</org.kie.executor.jms>
-                              <org.kie.server.persistence.ds>${org.jbpm.cluster.persistence.ds}</org.kie.server.persistence.ds>
-                              <org.kie.server.persistence.dialect>${org.jbpm.persistence.dialect}</org.kie.server.persistence.dialect>
-                          </systemProperties>
-                      </container>
-                      <deployables combine.self="override">
-                        <deployable>
-                          <groupId>${project.groupId}</groupId>
-                          <artifactId>kie-server</artifactId>
-                          <!-- default, may be overridden in container specific profiles -->
-                          <classifier>${kie.server.classifier}</classifier>
-                          <type>war</type>
-                          <properties>
-                            <context>${kie.server.context}</context>
-                          </properties>
-                          <pingUrlPath>/${kie.server.context}/services/rest/server</pingUrlPath>
-                          <pingTimeout>60000</pingTimeout>
-                        </deployable>
-                      </deployables>
-                      <configuration>
-                          <home>${container.profile.dir}/cluster2</home>
-                          <properties>
-                              <cargo.jboss.configuration>standalone-full</cargo.jboss.configuration>
-                              <cargo.jvmargs>-Xmx1024m</cargo.jvmargs>
-                              <cargo.port.offset>300</cargo.port.offset>
-                              <cargo.datasource.datasource.jbpm>
-                                cargo.datasource.driver=${org.jbpm.datasource.driver.class}|
-                                cargo.datasource.url=${org.jbpm.datasource.connection.url}|
-                                cargo.datasource.jndi=${org.jbpm.cluster.persistence.ds}|
-                                cargo.datasource.username=${org.jbpm.datasource.username}|
-                                cargo.datasource.password=${org.jbpm.datasource.password}|
-                                cargo.datasource.transactionsupport=XA_TRANSACTION
-                              </cargo.datasource.datasource.jbpm>
-                          </properties>
-                      </configuration>
-                  </configuration>
-                  <goals>
-                    <goal>start</goal>
-                  </goals>
-                </execution>
-                <execution>
-                  <id>stop-first-container</id>
+                  <id>stop-container-cluster</id>
                   <phase>post-integration-test</phase>
                   <configuration>
                     <configuration>
-                          <properties>
-                              <cargo.port.offset>150</cargo.port.offset>
-                          </properties>
-                      </configuration>
-                  </configuration>
-                  <goals>
-                    <goal>stop</goal>
-                  </goals>
-                </execution>
-                <execution>
-                  <id>stop-second-container</id>
-                  <phase>post-integration-test</phase>
-                  <configuration>
-                    <configuration>
-                          <properties>
-                              <cargo.port.offset>300</cargo.port.offset>
-                          </properties>
-                      </configuration>
+                      <properties>
+                        <cargo.port.offset>150</cargo.port.offset>
+                      </properties>
+                    </configuration>
                   </configuration>
                   <goals>
                     <goal>stop</goal>
