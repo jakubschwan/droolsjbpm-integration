@@ -25,56 +25,43 @@ public class ClusterDeployingIntegrationTest extends ClusterManagementBaseTest {
 
     @Before
     public void deployContainer() {
-        KieServerAssert.assertNullOrEmpty("Container found before test execution!", mgmtControllerClient.listContainerSpec(templateOne.getId()));
+        KieServerAssert.assertNullOrEmpty("Container found before test execution!", mgmtControllerClient.listContainerSpec(kieServerTemplate.getId()));
     }
 
     @Test
     public void deployContainerOnNoneServer() {
-        turnOffBravoServer();
-        turnOffCharlieServer();
+        turnOffSecondaryServer();
+        turnOffPrimaryServer();
 
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
 
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerSpec(mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient);
     }
 
     @Test
     public void deployContainerOnOneServer() {
-        turnOffBravoServer();
+        turnOffSecondaryServer();
 
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
 
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerSpec(mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, secondaryClient);
     }
 
     @Test
     public void deployContainerOnTwoServers() {
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
 
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo, clientCharlie);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-    }
-
-    @Test
-    public void deployContainerOnOtherTemplate() {
-        ContainerSpec containerToDeploy = createDefaultContainer(templateTwo);
-        mgmtControllerClient.saveContainerSpec(templateTwo.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateTwo.getId(), CONTAINER_ID);
-
-        KieServerAssert.assertNullOrEmpty("Container was found on wrong template.", mgmtControllerClient.listContainerSpec(templateOne.getId()));
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateTwo.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientBravo, clientCharlie);
+        checkContainerSpec(mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, secondaryClient, primaryClient);
     }
 
 }

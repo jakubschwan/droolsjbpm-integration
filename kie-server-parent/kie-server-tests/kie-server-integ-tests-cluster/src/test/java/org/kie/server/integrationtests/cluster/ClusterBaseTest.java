@@ -19,7 +19,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.codehaus.cargo.container.deployer.DeployableMonitor;
@@ -58,29 +57,30 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
 
     protected static Logger logger = LoggerFactory.getLogger(ClusterBaseTest.class);
 
-    //only 3 servers, holded in own object (no collection)
-    protected KieServicesClient clientAlpha, clientBravo, clientCharlie;
-    protected static String kieServerUrlAlpha, kieServerUrlBravo, kieServerUrlCharlie;
+    protected KieServicesClient primaryClient, secondaryClient;
+    protected static String primaryKieServerUrl, secondaryKieServerUrl;
     protected static String serversUrl;
 
-    protected ServerTemplate templateOne, templateTwo;
+    protected ServerTemplate kieServerTemplate;
 
     protected KieServerMgmtControllerClient mgmtControllerClient;
 
+    private static boolean secondaryKieServerIsDeployed = true;
+    private static boolean primaryKieServerIsDeployed = true;
+
     @BeforeClass
     public static void startServers() {
-        kieServerUrlAlpha = TestConfig.getKieServerHttpUrl();
-        kieServerUrlBravo = System.getProperty("kie.server.cluster.one.http.url");
-        kieServerUrlCharlie = System.getProperty("kie.server.cluster.two.http.url");
-        serversUrl = kieServerUrlBravo + "|" + kieServerUrlCharlie;
+        primaryKieServerUrl = TestConfig.getKieServerHttpUrl();
+        secondaryKieServerUrl = System.getProperty(ClusterTestConstants.SECONDARY_URL_PROPERTY);
+        serversUrl = primaryKieServerUrl + "|" + secondaryKieServerUrl;
     }
 
     @Before
     public void setupClustering() throws Exception {
-        turnOnBravoServer();
-        turnOnCharlieServer();
-        startSynchronization(kieServerUrlBravo, clientBravo);
-        startSynchronization(kieServerUrlCharlie, clientCharlie);
+        turnOnSecondaryServer();
+        turnOnPrimaryServer();
+        startSynchronization(secondaryKieServerUrl, secondaryClient);
+        startSynchronization(primaryKieServerUrl, primaryClient);
 
         setMgmtControllerClient();
         setServerTeplates();
@@ -101,19 +101,8 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     
     private void setServerTeplates() {
         Collection<ServerTemplate> serverTemplates = mgmtControllerClient.listServerTemplates();
-        if (serverTemplates.size() == 2) {
-            Iterator<ServerTemplate> iterator = serverTemplates.iterator();
-            ServerTemplate serverTemplate = iterator.next();
-            if (serverTemplate.getId().equals("templateOne")) {
-                templateOne = serverTemplate;
-            } else {
-                templateTwo = serverTemplate;
-            }
-            if (templateOne == null) {
-                templateOne = iterator.next();
-            } else {
-                templateTwo = iterator.next();
-            }
+        if (serverTemplates.size() == 1) {
+            kieServerTemplate = serverTemplates.iterator().next();
         }
     }
 
@@ -133,9 +122,8 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     }
 
     protected void createClientsForServers() throws Exception {
-        clientAlpha = createDefaultClient(kieServerUrlAlpha);
-        clientBravo = createDefaultClient(kieServerUrlBravo);
-        clientCharlie = createDefaultClient(kieServerUrlCharlie);
+        primaryClient = createDefaultClient(primaryKieServerUrl);
+        secondaryClient = createDefaultClient(secondaryKieServerUrl);
     }
 
     @After
@@ -161,50 +149,47 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
     }
 
     protected void disposeAllClusterContainers() {
-        disposeAllClusterContainers(clientAlpha, clientBravo, clientCharlie);
+        disposeAllClusterContainers(primaryClient, secondaryClient);
     }
 
-    private static boolean bravoKieServerIsDeployed = true;
-    private static boolean charliKieServerIsDeployed = true;
-
-    protected void turnOnBravoServer() throws InterruptedException, MalformedURLException {
-        if (!bravoKieServerIsDeployed) {
+    protected void turnOnSecondaryServer() throws InterruptedException, MalformedURLException {
+        if (!secondaryKieServerIsDeployed) {
             System.out.println("\n***** Turn on BRAVO\n");
-            DeployableMonitor dm = new URLDeployableMonitor(new URL(kieServerUrlBravo), 60000);
+            DeployableMonitor dm = new URLDeployableMonitor(new URL(secondaryKieServerUrl), 60000);
             ContainerRemoteController remoteControllerBravo = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 150));
-            remoteControllerBravo.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster1/deployments/kie-server-services.war", dm);
-            bravoKieServerIsDeployed = true;
-            startSynchronization(kieServerUrlBravo, clientBravo);
+            remoteControllerBravo.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster-kie-server/deployments/kie-server-services.war", dm);
+            secondaryKieServerIsDeployed = true;
+            startSynchronization(secondaryKieServerUrl, secondaryClient);
         }
     }
 
-    protected void turnOffBravoServer() {
-        if (bravoKieServerIsDeployed) {
+    protected void turnOffSecondaryServer() {
+        if (secondaryKieServerIsDeployed) {
             System.out.println("\n***** Turn off BRAVO\n");
             ContainerRemoteController remoteControllerBravo = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 150));
-            remoteControllerBravo.undeployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster1/deployments/kie-server-services.war");
-            bravoKieServerIsDeployed = false;
+            remoteControllerBravo.undeployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster-kie-server/deployments/kie-server-services.war");
+            secondaryKieServerIsDeployed = false;
         }
     }
 
-    protected void turnOnCharlieServer() throws InterruptedException, MalformedURLException {
-        if (!charliKieServerIsDeployed) {
+    protected void turnOnPrimaryServer() throws InterruptedException, MalformedURLException {
+        if (!primaryKieServerIsDeployed) {
             System.out.println("\n***** Turn on CHARLIE\n");
             
-            DeployableMonitor dm = new URLDeployableMonitor(new URL(kieServerUrlCharlie), 60000);
-            ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 300));
-            remoteControllerCharlie.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster2/deployments/kie-server-services.war", dm);
-            charliKieServerIsDeployed = true;
-            startSynchronization(kieServerUrlCharlie, clientCharlie);
+            DeployableMonitor dm = new URLDeployableMonitor(new URL(primaryKieServerUrl), 60000);
+            ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990));
+            remoteControllerCharlie.deployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/default-kie-server/deployments/kie-server-services.war", dm);
+            primaryKieServerIsDeployed = true;
+            startSynchronization(primaryKieServerUrl, primaryClient);
         }
     }
 
-    protected void turnOffCharlieServer() {
-        if (charliKieServerIsDeployed) {
+    protected void turnOffPrimaryServer() {
+        if (primaryKieServerIsDeployed) {
             System.out.println("\n***** Turn off CHARLIE\n");
-            ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990 + 300));
-            remoteControllerCharlie.undeployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/cluster2/deployments/kie-server-services.war");
-            charliKieServerIsDeployed = false;
+            ContainerRemoteController remoteControllerCharlie = new ContainerRemoteController("wildfly10x", Integer.toString(9990));
+            remoteControllerCharlie.undeployWarFile("kie-server-services", System.getProperty("cluster.configuration.dir") + "/default-kie-server/deployments/kie-server-services.war");
+            primaryKieServerIsDeployed = false;
         }
     }
 
@@ -253,7 +238,7 @@ public abstract class ClusterBaseTest extends RestOnlyBaseIntegrationTest {
             config = KieServicesFactory.newRestConfiguration(url, TestConfig.getUsername(), TestConfig.getPassword());
         }
         addExtraCustomClasses(extraClasses);
-        KieServicesClient client = waitToClientCreated(clientAlpha, config);
+        KieServicesClient client = waitToClientCreated(primaryClient, config);
         return client;//createDefaultClient(config, marshallingFormat);
     }
 

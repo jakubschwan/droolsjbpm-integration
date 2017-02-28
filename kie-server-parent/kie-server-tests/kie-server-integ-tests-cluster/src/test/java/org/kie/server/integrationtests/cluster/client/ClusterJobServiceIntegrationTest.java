@@ -60,18 +60,18 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
         status.add(STATUS.QUEUED.toString());
         status.add(STATUS.RUNNING.toString());
         status.add(STATUS.RETRYING.toString());
-        finishAllJobsOnClient(status, jobServicesBravoClient, jobServicesCharlieClient);
+        finishAllJobsOnClient(status, secondaryJobServicesClient, primaryJobServicesClient);
     }
 
     @Test
     public void testScheduleAndRunJob() throws Exception {
         JobRequestInstance jobRequestInstance = createJobRequestInstance();
 
-        Long jobId = jobServicesBravoClient.scheduleRequest(jobRequestInstance);
+        Long jobId = secondaryJobServicesClient.scheduleRequest(jobRequestInstance);
         assertNotNull(jobId);
         assertTrue(jobId.longValue() > 0);
 
-        RequestInfoInstance jobRequest = jobServicesBravoClient.getRequestById(jobId, false, false);
+        RequestInfoInstance jobRequest = secondaryJobServicesClient.getRequestById(jobId, false, false);
         assertNotNull(jobRequest);
         assertEquals(jobId, jobRequest.getId());
         assertEquals(BUSINESS_KEY, jobRequest.getBusinessKey());
@@ -81,7 +81,7 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
                 equalTo(STATUS.DONE.toString())));
         assertEquals(PRINT_OUT_COMMAND, jobRequest.getCommandName());
 
-        jobRequest = jobServicesCharlieClient.getRequestById(jobId, false, false);
+        jobRequest = primaryJobServicesClient.getRequestById(jobId, false, false);
         assertNotNull(jobRequest);
         assertEquals(jobId, jobRequest.getId());
         assertEquals(BUSINESS_KEY, jobRequest.getBusinessKey());
@@ -91,11 +91,11 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
                 equalTo(STATUS.DONE.toString())));
         assertEquals(PRINT_OUT_COMMAND, jobRequest.getCommandName());
 
-        turnOffBravoServer();
+        turnOffSecondaryServer();
 
-        KieServerSynchronization.waitForJobToFinish(jobServicesCharlieClient, jobId);
+        KieServerSynchronization.waitForJobToFinish(primaryJobServicesClient, jobId);
 
-        jobRequest = jobServicesCharlieClient.getRequestById(jobId, false, false);
+        jobRequest = primaryJobServicesClient.getRequestById(jobId, false, false);
         assertNotNull(jobRequest);
         assertEquals(jobId, jobRequest.getId());
         assertEquals(BUSINESS_KEY, jobRequest.getBusinessKey());
@@ -106,7 +106,7 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
 
     @Test
     public void testScheduleSearchByStatusAndCancelJob() {
-        int currentNumberOfCancelled = jobServicesCharlieClient.getRequestsByStatus(Collections.singletonList(STATUS.CANCELLED.toString()), 0, 100).size();
+        int currentNumberOfCancelled = primaryJobServicesClient.getRequestsByStatus(Collections.singletonList(STATUS.CANCELLED.toString()), 0, 100).size();
 
         Calendar tomorrow = Calendar.getInstance();
         tomorrow.add(Calendar.DATE, 1);
@@ -114,14 +114,14 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
         JobRequestInstance jobRequestInstance = createJobRequestInstance();
         jobRequestInstance.setScheduledDate(tomorrow.getTime());
 
-        Long jobId = jobServicesCharlieClient.scheduleRequest(jobRequestInstance);
+        Long jobId = primaryJobServicesClient.scheduleRequest(jobRequestInstance);
         assertNotNull(jobId);
         assertTrue(jobId.longValue() > 0);
 
         List<String> status = new ArrayList<String>();
         status.add(STATUS.QUEUED.toString());
 
-        List<RequestInfoInstance> result = jobServicesCharlieClient.getRequestsByStatus(status, 0, 100);
+        List<RequestInfoInstance> result = primaryJobServicesClient.getRequestsByStatus(status, 0, 100);
         assertNotNull(result);
         assertEquals(1, result.size());
 
@@ -130,11 +130,11 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
         assertRequestInfoInstance(expected, jobRequest);
         assertNotNull(jobRequest.getScheduledDate());
 
-        turnOffCharlieServer();
+        turnOffPrimaryServer();
 
-        jobServicesBravoClient.cancelRequest(jobId);
+        secondaryJobServicesClient.cancelRequest(jobId);
 
-        result = jobServicesBravoClient.getRequestsByStatus(status, 0, 100);
+        result = secondaryJobServicesClient.getRequestsByStatus(status, 0, 100);
         assertNotNull(result);
         assertEquals(0, result.size());
 
@@ -142,7 +142,7 @@ public class ClusterJobServiceIntegrationTest extends ClusterClientBaseTest {
         status.clear();
         status.add(STATUS.CANCELLED.toString());
 
-        result = jobServicesBravoClient.getRequestsByStatus(status, 0, 100);
+        result = secondaryJobServicesClient.getRequestsByStatus(status, 0, 100);
         assertNotNull(result);
         assertEquals(1 + currentNumberOfCancelled, result.size());
     }

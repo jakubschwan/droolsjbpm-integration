@@ -31,51 +31,20 @@ public class ClusterManagementIntegrationTest extends ClusterManagementBaseTest 
     @Test
     public void testGetContainerFromOneTemplate() {
         ContainerSpec containerSpec = createDefaultContainer();
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerSpec);
 
-        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
-        assertEquals(templateOne.getId(), containerResponseEntity.getServerTemplateKey().getId());
-        assertEquals(templateOne.getName(), containerResponseEntity.getServerTemplateKey().getName());
-
-        try {
-            containerResponseEntity = mgmtControllerClient.getContainerInfo(templateTwo.getId(), CONTAINER_ID);
-            fail("Should throw exception about container not existing container on this server template.");
-        } catch (UnexpectedResponseCodeException ex) {
-            assertEquals(404, ex.getResponseCode());
-        }
+        assertEquals(kieServerTemplate.getId(), containerResponseEntity.getServerTemplateKey().getId());
+        assertEquals(kieServerTemplate.getName(), containerResponseEntity.getServerTemplateKey().getName());
 
     }
 
-    @Test
-    @Category(Smoke.class)
-    public void testGetContainerFromBothTemplates() {
-        ContainerSpec containerSpec = createDefaultContainer();
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
-        mgmtControllerClient.saveContainerSpec(templateTwo.getId(), containerSpec);
-
-        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
-        checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
-        assertEquals(templateOne.getId(), containerResponseEntity.getServerTemplateKey().getId());
-        assertEquals(templateOne.getName(), containerResponseEntity.getServerTemplateKey().getName());
-
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateTwo.getId(), CONTAINER_ID);
-        checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
-        assertEquals(templateTwo.getId(), containerResponseEntity.getServerTemplateKey().getId());
-        assertEquals(templateTwo.getName(), containerResponseEntity.getServerTemplateKey().getName());
-
-    }
 
     @Test
     public void testGetNotExistingContainer() {
         try {
-            mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
-            fail("Should throw exception about container not existing container on this server template.");
-        } catch (UnexpectedResponseCodeException ex) {
-            assertEquals(404, ex.getResponseCode());
-        }
-        try {
-            mgmtControllerClient.getContainerInfo(templateTwo.getId(), CONTAINER_ID);
+            mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
             fail("Should throw exception about container not existing container on this server template.");
         } catch (UnexpectedResponseCodeException ex) {
             assertEquals(404, ex.getResponseCode());
@@ -85,206 +54,206 @@ public class ClusterManagementIntegrationTest extends ClusterManagementBaseTest 
     @Test
     public void testStartRemoveServerInstaceStopContainer() {
         //deploy container
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
         //get container
-        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
 
         //check container not deployed on server instances
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha, clientBravo, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient, primaryClient);
 
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie, clientBravo);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
         //turnOffServer(kieServerAlpha);
-        turnOffBravoServer();
+        turnOffSecondaryServer();
         //logger.warn(kieServerAlpha.getKieServerInfo().toString());
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
         //stop
-        mgmtControllerClient.stopContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.stopContainer(kieServerTemplate.getId(), CONTAINER_ID);
         //check container not deployed on server instances
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientCharlie, clientAlpha);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, primaryClient);
     }
 
     @Test
     public void testStartAddServerInstanceStopContainer() {
         //turnOffServer(kieServerBravo);
-        turnOffBravoServer();
+        turnOffSecondaryServer();
 
         //deploy container
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
         //get container
-        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
 
         //check container not deployed on server instances
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, primaryClient);
 
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
         //add server instance
         try {
-            turnOnBravoServer();
+            turnOnSecondaryServer();
         } catch(InterruptedException | MalformedURLException ex) {
             fail("Server was not started due:\n" + ex);
         }
 
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
         //maybe need timeout
-        //waitForAllKieServerSynchronization(1,clientAlpha,clientBravo);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie, clientBravo);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        //waitForAllKieServerSynchronization(1,primaryClient,secondaryClient);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
-        mgmtControllerClient.stopContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.stopContainer(kieServerTemplate.getId(), CONTAINER_ID);
         //check container not deployed on server instances
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha, clientBravo, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient, primaryClient);
     }
 
     @Test
     public void testStartContainerAndRemoveAllServerInstace() {
         //deploy container
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
         //get container
-        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha, clientBravo, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient, primaryClient);
 
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie, clientBravo);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient, secondaryClient);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
-        turnOffCharlieServer();
+        turnOffPrimaryServer();
 
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, secondaryClient);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
-        turnOffBravoServer();
+        turnOffSecondaryServer();
 
         //get container
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED); //not sure in status type
         //check container not deployed on server instances
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
         //try to stop container??
-        mgmtControllerClient.stopContainer(templateOne.getId(), CONTAINER_ID);
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.stopContainer(kieServerTemplate.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
     }
 
     @Test
     public void testRemoveAndAddNewInstanceWithContainer() {
-        turnOffBravoServer();
+        turnOffSecondaryServer();
 
         //deploy and get container
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
-        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
+        ContainerSpec containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STOPPED);
 
         //check container not deployed on server instances
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient, primaryClient);
 
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
         //check container deployed on server instances
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
-        turnOffCharlieServer();
+        turnOffPrimaryServer();
 
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
         try {
-        turnOnBravoServer();
+        turnOnSecondaryServer();
         } catch(InterruptedException | MalformedURLException ex) {
             fail("Server was not started due:\n" + ex);
         }
 
         //check container deployed on server
-        containerResponseEntity = mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID);
+        containerResponseEntity = mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID);
         checkContainerSpec(containerResponseEntity, KieContainerStatus.STARTED);
 
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, secondaryClient);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
     }
 
     @Test
     @Ignore
     public void testAddServerInstencesAfterStartOfContainer() throws Exception {
-        turnOffBravoServer();
-        turnOffCharlieServer();
+        turnOffSecondaryServer();
+        turnOffPrimaryServer();
 
-        ContainerSpec containerToDeploy = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
 
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
+        checkContainerSpec(mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
         
         try {
             //start server and check if contianer is deployed
-            turnOnBravoServer();
+            turnOnSecondaryServer();
         } catch (InterruptedException | MalformedURLException ex) {
            fail("Server was not started due:\n" + ex);
         }
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo);
+        checkContainerSpec(mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, secondaryClient);
         
         try {
-            turnOnCharlieServer();
+            turnOnPrimaryServer();
         } catch (InterruptedException |MalformedURLException ex) {
             fail("Server was not started due:\n" + ex);
         }
         //bug after start second server (first can't be founded)
-        checkContainerSpec(mgmtControllerClient.getContainerInfo(templateOne.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
-        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, clientAlpha);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo,clientCharlie);
+        checkContainerSpec(mgmtControllerClient.getContainerInfo(kieServerTemplate.getId(), CONTAINER_ID), KieContainerStatus.STARTED);
+        checkContainerNotDeployedOnServerInstances(CONTAINER_ID, primaryClient);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, secondaryClient,primaryClient);
     }
     
     

@@ -44,52 +44,52 @@ public class ClusterKieScannerIntegrationTest extends ClusterManagementBaseTest 
     @Ignore
     public void testUpdateContianerByScannerScanNow() {
         //create default container with old release ID
-        ContainerSpec containerSpec = createDefaultContainer(templateOne);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
-        mgmtControllerClient.startContainer(templateOne.getId(), containerSpec.getId());
+        ContainerSpec containerSpec = createDefaultContainer(kieServerTemplate);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerSpec);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), containerSpec.getId());
 
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientBravo, clientCharlie);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, secondaryClient, primaryClient);
 
         //update releaseId version to LATEST to allow automatic update by kie scanner 
-//        clientBravo.updateReleaseId(CONTAINER_ID, scannerReleaseId);
-//        checkContainerOnServiceInstaces(releaseId, clientBravo, clientCharlie);
+//        secondaryClient.updateReleaseId(CONTAINER_ID, scannerReleaseId);
+//        checkContainerOnServiceInstaces(releaseId, secondaryClient, clientCharlie);
 
         //scan now to update container
         KieScannerResource kieScanner = new KieScannerResource(KieScannerStatus.SCANNING, 0l);
-        ServiceResponse<KieScannerResource> scanNow = clientCharlie.updateScanner(CONTAINER_ID, kieScanner);
+        ServiceResponse<KieScannerResource> scanNow = primaryClient.updateScanner(CONTAINER_ID, kieScanner);
         assertEquals(ServiceResponse.ResponseType.SUCCESS, scanNow.getType());
         assertEquals(KieScannerStatus.STOPPED, scanNow.getResult().getStatus());
 
         //check that scanner change version of container
-        checkContainerOnServiceInstaces(newReleaseId, clientBravo, clientCharlie);
+        checkContainerOnServiceInstaces(newReleaseId, secondaryClient, primaryClient);
     }
 
     @Test
     @Ignore
     public void testUpdateContainerByScannerStarted() throws Exception {
-        turnOffBravoServer();
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), createDefaultContainer(templateOne));
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
-        checkContainerDeployedOnServerInstances(CONTAINER_ID, clientCharlie);
+        turnOffSecondaryServer();
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), createDefaultContainer(kieServerTemplate));
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
+        checkContainerDeployedOnServerInstances(CONTAINER_ID, primaryClient);
 
 //        clientCharlie.updateReleaseId(CONTAINER_ID, scannerReleaseId);
 //        checkContainerOnServiceInstaces(releaseId, clientCharlie);
 
         KieScannerResource kieScannerResource = new KieScannerResource(KieScannerStatus.STARTED, 100l);
-        ServiceResponse<KieScannerResource> started = clientCharlie.updateScanner(CONTAINER_ID, kieScannerResource);
+        ServiceResponse<KieScannerResource> started = primaryClient.updateScanner(CONTAINER_ID, kieScannerResource);
         assertEquals(ServiceResponse.ResponseType.SUCCESS, started.getType());
         assertEquals(KieScannerStatus.STARTED, started.getResult().getStatus());
 
-        checkContainerOnServiceInstaces(newReleaseId, clientCharlie);
+        checkContainerOnServiceInstaces(newReleaseId, primaryClient);
 
-        turnOffCharlieServer();
+        turnOffPrimaryServer();
         // deploy new version of contianer
         ReleaseId newNewReleaseId = new ReleaseId("org.kie.server.testing", "stateless-session-kjar", "2.1.0-SNAPSHOT");
         KieServerDeployer.createAndDeployKJar(newNewReleaseId);
 
-        turnOnBravoServer();
+        turnOnSecondaryServer();
         //container should be autoupdate by started scanner
-        checkContainerOnServiceInstaces(newNewReleaseId, clientBravo);
+        checkContainerOnServiceInstaces(newNewReleaseId, secondaryClient);
     }
 
     private void checkContainerOnServiceInstaces(ReleaseId resolvedReleaseId, KieServicesClient... clients) {

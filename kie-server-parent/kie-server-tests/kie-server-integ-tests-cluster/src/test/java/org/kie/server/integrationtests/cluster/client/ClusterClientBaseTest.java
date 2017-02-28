@@ -28,30 +28,30 @@ public abstract class ClusterClientBaseTest extends ClusterBaseTest {
 
     protected static KieContainer kieContainer;
 
-    protected ProcessServicesClient processCharlieClient;
-    protected UserTaskServicesClient taskCharlieClient;
-    protected QueryServicesClient queryCharlieClient;
-    protected JobServicesClient jobServicesCharlieClient;
-    protected DocumentServicesClient documentCharlieClient;
+    protected ProcessServicesClient primaryProcessClient;
+    protected UserTaskServicesClient primaryTaskClient;
+    protected QueryServicesClient primaryQueryClient;
+    protected JobServicesClient primaryJobServicesClient;
+    protected DocumentServicesClient primaryDocumentClient;
 
-    protected ProcessServicesClient processBravoClient;
-    protected UserTaskServicesClient taskBravoClient;
-    protected QueryServicesClient queryBravoClient;
-    protected JobServicesClient jobServicesBravoClient;
-    protected DocumentServicesClient documentBravoClient;
+    protected ProcessServicesClient secondaryProcessClient;
+    protected UserTaskServicesClient secondaryTaskClient;
+    protected QueryServicesClient secondaryQueryClient;
+    protected JobServicesClient secondaryJobServicesClient;
+    protected DocumentServicesClient secondaryDocumentClient;
 
     @Before
     public void setupClusterClients() {
-        processCharlieClient = clientCharlie.getServicesClient(ProcessServicesClient.class);
-        taskCharlieClient = clientCharlie.getServicesClient(UserTaskServicesClient.class);
-        queryCharlieClient = clientCharlie.getServicesClient(QueryServicesClient.class);
-        jobServicesCharlieClient = clientCharlie.getServicesClient(JobServicesClient.class);
-        documentCharlieClient = clientCharlie.getServicesClient(DocumentServicesClient.class);
+        primaryProcessClient = primaryClient.getServicesClient(ProcessServicesClient.class);
+        primaryTaskClient = primaryClient.getServicesClient(UserTaskServicesClient.class);
+        primaryQueryClient = primaryClient.getServicesClient(QueryServicesClient.class);
+        primaryJobServicesClient = primaryClient.getServicesClient(JobServicesClient.class);
+        primaryDocumentClient = primaryClient.getServicesClient(DocumentServicesClient.class);
 
-        processBravoClient = clientBravo.getServicesClient(ProcessServicesClient.class);
-        taskBravoClient = clientBravo.getServicesClient(UserTaskServicesClient.class);
-        queryBravoClient = clientBravo.getServicesClient(QueryServicesClient.class);
-        jobServicesBravoClient = clientBravo.getServicesClient(JobServicesClient.class);
-        documentBravoClient = clientBravo.getServicesClient(DocumentServicesClient.class);
+        secondaryProcessClient = secondaryClient.getServicesClient(ProcessServicesClient.class);
+        secondaryTaskClient = secondaryClient.getServicesClient(UserTaskServicesClient.class);
+        secondaryQueryClient = secondaryClient.getServicesClient(QueryServicesClient.class);
+        secondaryJobServicesClient = secondaryClient.getServicesClient(JobServicesClient.class);
+        secondaryDocumentClient = secondaryClient.getServicesClient(DocumentServicesClient.class);
     }
 }

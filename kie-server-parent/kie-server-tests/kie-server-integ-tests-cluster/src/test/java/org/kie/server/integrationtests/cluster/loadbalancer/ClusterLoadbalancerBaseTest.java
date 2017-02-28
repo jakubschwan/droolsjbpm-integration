@@ -60,14 +60,14 @@ public abstract class ClusterLoadbalancerBaseTest extends ClusterBaseTest {
         Map<Capability, ContainerConfig> config = new HashMap<>();
         config.put(Capability.PROCESS, new ProcessConfig(RuntimeStrategy.SINGLETON.toString(), "", "", MergeMode.MERGE_COLLECTIONS.toString()));
 
-        ContainerSpec containerSpec = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, config);
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerSpec);
+        ContainerSpec containerSpec = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, kieServerTemplate, releaseId, KieContainerStatus.STOPPED, config);
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerSpec);
 
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
 
         //make sure, that contianer is deployed on both servers
-        KieServerSynchronization.waitForKieServerSynchronization(clientBravo, 1);
-        KieServerSynchronization.waitForKieServerSynchronization(clientCharlie, 1);
+        KieServerSynchronization.waitForKieServerSynchronization(secondaryClient, 1);
+        KieServerSynchronization.waitForKieServerSynchronization(primaryClient, 1);
         KieServerSynchronization.waitForKieServerSynchronization(client, 1);
     }
 

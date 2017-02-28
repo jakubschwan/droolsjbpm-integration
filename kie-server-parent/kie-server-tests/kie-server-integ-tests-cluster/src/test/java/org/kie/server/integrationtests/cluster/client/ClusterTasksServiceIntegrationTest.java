@@ -46,49 +46,49 @@ public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
 
     @Before
     public void deployContainer() throws Exception {
-        ContainerSpec containerToDeploy = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, templateOne, releaseId, KieContainerStatus.STOPPED, new HashMap());
-        mgmtControllerClient.saveContainerSpec(templateOne.getId(), containerToDeploy);
-        mgmtControllerClient.startContainer(templateOne.getId(), CONTAINER_ID);
+        ContainerSpec containerToDeploy = new ContainerSpec(CONTAINER_ID, CONTAINER_NAME, kieServerTemplate, releaseId, KieContainerStatus.STOPPED, new HashMap());
+        mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);
+        mgmtControllerClient.startContainer(kieServerTemplate.getId(), CONTAINER_ID);
     }
 
     @Test
     public void testStartAndStopTask() {
-        Long processInstanceId = processCharlieClient.startProcess(CONTAINER_ID, PROCESS_ID_USERTASK);
+        Long processInstanceId = primaryProcessClient.startProcess(CONTAINER_ID, PROCESS_ID_USERTASK);
         assertNotNull(processInstanceId);
         assertTrue(processInstanceId.longValue() > 0);
         try {
-            List<TaskSummary> taskList = taskCharlieClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            List<TaskSummary> taskList = primaryTaskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
             assertNotNull(taskList);
             assertEquals(1, taskList.size());
             TaskSummary taskSummary = taskList.get(0);
             checkTaskNameAndStatus(taskSummary, "First task", Status.Reserved);
 
-            taskList = taskBravoClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            taskList = secondaryTaskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
             assertNotNull(taskList);
             assertEquals(1, taskList.size());
             taskSummary = taskList.get(0);
             checkTaskNameAndStatus(taskSummary, "First task", Status.Reserved);
 
-            taskCharlieClient.startTask(CONTAINER_ID, taskSummary.getId(), USER_YODA);
+            primaryTaskClient.startTask(CONTAINER_ID, taskSummary.getId(), USER_YODA);
 
-            taskList = taskCharlieClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            taskList = primaryTaskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
             assertNotNull(taskList);
             assertEquals(1, taskList.size());
             taskSummary = taskList.get(0);
             checkTaskNameAndStatus(taskSummary, "First task", Status.InProgress);
 
-            taskList = taskBravoClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            taskList = secondaryTaskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
             assertNotNull(taskList);
             assertEquals(1, taskList.size());
             taskSummary = taskList.get(0);
             checkTaskNameAndStatus(taskSummary, "First task", Status.InProgress);
 
             //turn off server and complete task on other one
-            turnOffCharlieServer();
+            turnOffPrimaryServer();
 
-            taskBravoClient.stopTask(CONTAINER_ID, taskSummary.getId(), USER_YODA);
+            secondaryTaskClient.stopTask(CONTAINER_ID, taskSummary.getId(), USER_YODA);
 
-            taskList = taskBravoClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            taskList = secondaryTaskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
             assertNotNull(taskList);
             assertEquals(1, taskList.size());
             taskSummary = taskList.get(0);
@@ -96,18 +96,18 @@ public class ClusterTasksServiceIntegrationTest extends ClusterClientBaseTest {
 
             try {
                 //turn on back server and check if task is stopped
-                turnOnCharlieServer();
+                turnOnPrimaryServer();
             } catch (InterruptedException |MalformedURLException ex) {
             fail("Server was not started due:\n" + ex);
             }
 
-            taskList = taskCharlieClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            taskList = primaryTaskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
             assertNotNull(taskList);
             assertEquals(1, taskList.size());
             taskSummary = taskList.get(0);
             checkTaskNameAndStatus(taskSummary, "First task", Status.Reserved);
         } finally {
-            processBravoClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
+            secondaryProcessClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
         }
     }
 
