@@ -17,8 +17,10 @@ package org.kie.server.integrationtests.cluster.management;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.kie.server.api.model.KieContainerStatus;
 import org.kie.server.controller.api.model.spec.ContainerSpec;
+import org.kie.server.integrationtests.category.Smoke;
 import org.kie.server.integrationtests.shared.KieServerAssert;
 
 public class ClusterDeployingIntegrationTest extends ClusterManagementBaseTest {
@@ -55,6 +57,7 @@ public class ClusterDeployingIntegrationTest extends ClusterManagementBaseTest {
     }
 
     @Test
+    @Category(Smoke.class)
     public void deployContainerOnTwoServers() {
         ContainerSpec containerToDeploy = createDefaultContainer(kieServerTemplate);
         mgmtControllerClient.saveContainerSpec(kieServerTemplate.getId(), containerToDeploy);

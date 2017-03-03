@@ -17,7 +17,7 @@ package org.kie.server.integrationtests.cluster;
 
 public class ClusterTestConstants {
 
-    public static final String SECONDARY_URL_PROPERTY = "kie.server.cluster.http.url";
+    public static final String SECONDARY_URL_PROPERTY = "kie.server.cluster.offset.http.url";
 
     public static final String USER_YODA = "yoda";
     public static final String USER_JOHN = "john";
