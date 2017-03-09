@@ -22,10 +22,8 @@ import org.codehaus.cargo.container.configuration.Configuration;
 import org.codehaus.cargo.container.configuration.ConfigurationType;
 import org.codehaus.cargo.container.deployable.DeployableType;
 import org.codehaus.cargo.container.deployable.WAR;
-import org.codehaus.cargo.container.deployer.DeployableMonitor;
 import org.codehaus.cargo.container.deployer.Deployer;
 import org.codehaus.cargo.container.property.RemotePropertySet;
-import org.codehaus.cargo.container.deployer.UrlPathDeployableMonitor;
 import org.codehaus.cargo.container.property.ServletPropertySet;
 import org.codehaus.cargo.container.weblogic.WebLogicPropertySet;
 import org.codehaus.cargo.generic.DefaultContainerFactory;
@@ -43,10 +41,6 @@ public class ContainerRemoteController {
     public ContainerRemoteController(String cargoContainerId, String containerPort) {
         configuration = new DefaultConfigurationFactory().createConfiguration(
                 cargoContainerId, ContainerType.REMOTE, ConfigurationType.RUNTIME);
-        configuration.setProperty("cargo.jboss.management-http.port", containerPort);
-        configuration.setProperty("cargo.remote.password", TestConfig.getPassword());
-        configuration.setProperty("cargo.remote.username", TestConfig.getUsername());
-
         container = (RemoteContainer) new DefaultContainerFactory().createContainer(
                 cargoContainerId, ContainerType.REMOTE, configuration);
         deployer = new DefaultDeployerFactory().createDeployer(container);
@@ -59,8 +53,6 @@ public class ContainerRemoteController {
         if(TestConfig.isCargoRemotePasswordProvided()) {
             configuration.setProperty(RemotePropertySet.PASSWORD, TestConfig.getCargoRemotePassword());
         }
-
-        //configuration.setProperty(ServletPropertySet.PORT, "38230");
 
         // WLS remote configuration
         if (TestConfig.isWebLogicHomeProvided()) {
@@ -76,11 +68,9 @@ public class ContainerRemoteController {
         deployer.undeploy(deployable);
     }
 
-    public void deployWarFile(String context, String warFilePath, DeployableMonitor dm) {
+    public void deployWarFile(String context, String warFilePath) {
         WAR deployable = (WAR) new DefaultDeployableFactory().createDeployable(container.getId(), warFilePath, DeployableType.WAR);
         deployable.setContext(context);
-        
-        DeployableMonitor dmm = new UrlPathDeployableMonitor(configuration, System.getProperty("kie.server.context")+"/services/rest/server", 60000);
-        deployer.deploy(deployable, dm);
+        deployer.deploy(deployable);
     }
 }
