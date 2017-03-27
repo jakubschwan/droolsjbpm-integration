@@ -16,6 +16,7 @@
         <containers.dir>${project.build.directory}/cluster-servers</containers.dir>
         <configurations.dir>${project.build.directory}/cluster-configurations</configurations.dir>
         <container.profile.dir>${configurations.dir}/profiles</container.profile.dir>
+        <deployable.tmp.dir>${configurations.dir}/deployable</deployable.tmp.dir>
         <!-- Datasource properties, servers in cluster need same db -->
         <org.jbpm.persistence.dialect>org.hibernate.dialect.H2Dialect</org.jbpm.persistence.dialect>
         <org.jbpm.datasource.connection.url>jdbc:h2:file:../database/test2-db;AUTO_SERVER=TRUE</org.jbpm.datasource.connection.url>
@@ -338,6 +339,33 @@
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <executions>
+          <execution>
+            <id>copy</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <artifactItems>
+            <artifactItem>
+              <groupId>${project.groupId}</groupId>
+              <artifactId>kie-server</artifactId>
+              <version>${project.version}</version>
+              <type>war</type>
+              <classifier>${kie.server.classifier}</classifier>
+              <overWrite>true</overWrite>
+              <outputDirectory>${container.profile.dir}/wars</outputDirectory>
+              <destFileName>${kie.server.context}.war</destFileName>
+            </artifactItem>
+          </artifactItems>
+        </configuration>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>

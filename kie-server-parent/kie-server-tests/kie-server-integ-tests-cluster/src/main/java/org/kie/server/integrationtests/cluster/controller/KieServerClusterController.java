@@ -44,6 +44,8 @@ public class KieServerClusterController {
 
     protected static Logger logger = LoggerFactory.getLogger(KieServerClusterController.class);
 
+    protected static final String DEPLOYABLE_TMP_DIR = "deployable.tmp.dir";
+
     private Configuration configuration;
     private Container container;
     private Deployer deployer;
@@ -99,7 +101,7 @@ public class KieServerClusterController {
         } else {
             config.setProperty(RemotePropertySet.USERNAME, TestConfig.getUsername());
         }
-        
+
         if (TestConfig.isCargoRemotePasswordProvided()) {
             config.setProperty(RemotePropertySet.PASSWORD, TestConfig.getCargoRemotePassword());
         } else {
@@ -131,6 +133,12 @@ public class KieServerClusterController {
 //        deployer.start(kieServerWar,monitor); //not supported
 
         kieServerWar = (WAR) new DefaultDeployableFactory().createDeployable(container.getId(), warFilePath, DeployableType.WAR);
+        if (kieServerWar == null) {
+            System.out.println("kieServerWar is null ");
+            kieServerWar.getFileHandler().copyDirectory(System.getProperty(DEPLOYABLE_TMP_DIR), warFilePath);
+        } else {
+            //ok?
+        }
 
         logger.info("Deploying {}", kieServerWar);
         System.out.println("Deploying " + kieServerWar);
@@ -154,6 +162,8 @@ public class KieServerClusterController {
 
     public void stopDeploy() {
 //        deployer.stop(kieServerWar, monitor); //not supported
+        //copy file to tmp directory after undeploy is war file delted
+        kieServerWar.getFileHandler().copyFile(warFilePath, System.getProperty(DEPLOYABLE_TMP_DIR), true);
 
         logger.info("Undeploying {}", kieServerWar);
         System.out.println("Undeploying " + kieServerWar);
