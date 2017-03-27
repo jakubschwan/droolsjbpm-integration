@@ -37,7 +37,7 @@
     <kie.server.testing.remote.repo.url>file://${kie.server.testing.remote.repo.dir}</kie.server.testing.remote.repo.url>
     <!-- Custom settings.xml used when building the testing kjars. By default there is no additional configuration needed,
          but for testing e.g. stated builds it is necessary to pass additional repository with the staged artifacts. -->
-    <kie.server.testing.kjars.build.settings.xml/> <!-- can be deleted-->
+    <kie.server.testing.kjars.build.settings.xml/>
     <org.jbpm.document.storage>${project.build.directory}/docs</org.jbpm.document.storage>
     <kie.server.router.url>http://localhost:${router.port}</kie.server.router.url>
     <!-- This property can be overriden to exclude specific test category according to specific needs. -->
@@ -118,52 +118,9 @@
     </dependencies>
   </dependencyManagement>
 
-  <repositories>
-    <!-- repo for cargo-maven-plgin snapshot version -->
-    <repository>
-      <id>sonatype-snapshots</id>
-      <name>Sonatype Snapshots</name>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
   <build>
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-enforcer-plugin</artifactId>
-          <executions>
-            <execution>
-              <id>ban-duplicated-classes</id>
-              <goals>
-                <goal>enforce</goal>
-              </goals>
-              <configuration>
-                <rules>
-                  <banDuplicateClasses>
-                    <dependencies>
-                      <!-- kie-server-router-proxy is an uberjar as it seems to be expected to work like that. -->
-                      <dependency>
-                        <groupId>org.kie.server</groupId>
-                        <artifactId>kie-server-router-proxy</artifactId>
-                        <ignoreClasses>
-                          <ignoreClass>*</ignoreClass>
-                        </ignoreClasses>
-                      </dependency>
-                    </dependencies>
-                  </banDuplicateClasses>
-                </rules>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
         <plugin>
           <groupId>org.codehaus.cargo</groupId>
           <artifactId>cargo-maven2-plugin</artifactId>
